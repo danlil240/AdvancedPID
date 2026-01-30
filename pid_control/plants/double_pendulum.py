@@ -2,7 +2,7 @@
 Double Inverted Pendulum on Cart
 
 A highly nonlinear, underactuated system with two pendulums mounted on a cart.
-Uses scipy.integrate for accurate ODE solving.
+Supports scipy.integrate or fixed-step RK4 for faster simulation.
 """
 
 import numpy as np
@@ -40,7 +40,8 @@ class DoublePendulumCart(BasePlant):
         sample_time: float = 0.01,
         initial_angle1: float = 0.1,
         initial_angle2: float = 0.1,
-        control_mode: str = 'position'
+        control_mode: str = 'position',
+        integrator: str = 'ivp'
     ):
         super().__init__(sample_time)
         
@@ -56,6 +57,8 @@ class DoublePendulumCart(BasePlant):
             raise ValueError("pendulum2_length must be positive")
         if friction < 0:
             raise ValueError("friction must be non-negative")
+        if integrator not in {'ivp', 'rk4'}:
+            raise ValueError("integrator must be 'ivp' or 'rk4'")
         
         self.M = cart_mass
         self.m1 = pendulum1_mass
@@ -65,6 +68,7 @@ class DoublePendulumCart(BasePlant):
         self.b = friction
         self.g = gravity
         self.control_mode = control_mode
+        self._integrator = integrator
         
         self.initial_angle1 = initial_angle1
         self.initial_angle2 = initial_angle2
@@ -142,19 +146,22 @@ class DoublePendulumCart(BasePlant):
         ])
     
     def update(self, control_input: float) -> float:
-        """Update system state using scipy.integrate.solve_ivp."""
+        """Update system state using the configured integrator."""
         self._force = control_input + self._disturbance
         
-        # Use scipy's solve_ivp for integration
-        sol = solve_ivp(
-            lambda t, y: self._dynamics(y, self._force),
-            [0, self._dt],
-            self.state,
-            method='RK45',
-            dense_output=False
-        )
-        
-        self.state = sol.y[:, -1]
+        if self._integrator == 'rk4':
+            self.state = self._rk4_step(self.state, self._force)
+        else:
+            # Use scipy's solve_ivp for integration
+            sol = solve_ivp(
+                lambda t, y: self._dynamics(y, self._force),
+                [0, self._dt],
+                self.state,
+                method='RK45',
+                dense_output=False
+            )
+            
+            self.state = sol.y[:, -1]
         
         # Normalize angles to [-pi, pi]
         self.state[2] = np.arctan2(np.sin(self.state[2]), np.cos(self.state[2]))
@@ -173,6 +180,15 @@ class DoublePendulumCart(BasePlant):
         
         self._time += self._dt
         return self._output
+
+    def _rk4_step(self, state: np.ndarray, force: float) -> np.ndarray:
+        """Single RK4 integration step for faster simulation loops."""
+        dt = self._dt
+        k1 = self._dynamics(state, force)
+        k2 = self._dynamics(state + 0.5 * dt * k1, force)
+        k3 = self._dynamics(state + 0.5 * dt * k2, force)
+        k4 = self._dynamics(state + dt * k3, force)
+        return state + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
     
     def reset(self):
         """Reset the system to initial state."""
@@ -303,6 +319,7 @@ class DoublePendulumCart(BasePlant):
             'friction': self.b,
             'gravity': self.g,
             'control_mode': self.control_mode,
+            'integrator': self._integrator,
             'sample_time': self.sample_time,
             'initial_angle1_deg': np.degrees(self.initial_angle1),
             'initial_angle2_deg': np.degrees(self.initial_angle2)

@@ -3,3 +3,4 @@
 *.png
 *.cpython-311.pyc
 
+./output

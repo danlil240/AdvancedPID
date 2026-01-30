@@ -309,7 +309,7 @@ def create_animated_visualization():
     ax_force = fig.add_subplot(gs[1, 1])
     line_force, = ax_force.plot([], [], 'purple', linewidth=1.5)
     ax_force.set_xlim(0, 8)
-    ax_force.set_ylim(-100, 100)
+    ax_force.set_ylim(-10, 100)
     ax_force.set_xlabel('Time (s)')
     ax_force.set_ylabel('Force (N)')
     ax_force.set_title('Control Force')
