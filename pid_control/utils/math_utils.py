@@ -1,211 +1,106 @@
 """
 Mathematical utility functions for PID control.
+Uses numpy for efficient array operations.
 """
 
-from typing import List, Optional, Sequence
-import math
+from typing import Optional, Union
+import numpy as np
+from numpy.typing import ArrayLike
 
 
 def clamp(value: float, min_val: Optional[float], max_val: Optional[float]) -> float:
-    """
-    Clamp a value between minimum and maximum bounds.
-    
-    Args:
-        value: Value to clamp
-        min_val: Minimum bound (None for no lower bound)
-        max_val: Maximum bound (None for no upper bound)
-        
-    Returns:
-        Clamped value
-    """
-    if min_val is not None and value < min_val:
-        return min_val
-    if max_val is not None and value > max_val:
-        return max_val
-    return value
+    """Clamp a value between minimum and maximum bounds."""
+    if min_val is None and max_val is None:
+        return value
+    return float(np.clip(value, min_val, max_val))
 
 
 def interpolate(x: float, x0: float, x1: float, y0: float, y1: float) -> float:
-    """
-    Linear interpolation between two points.
-    
-    Args:
-        x: Input value
-        x0, x1: X coordinates of known points
-        y0, y1: Y coordinates of known points
-        
-    Returns:
-        Interpolated y value
-    """
-    if abs(x1 - x0) < 1e-12:
-        return (y0 + y1) / 2.0
-    t = (x - x0) / (x1 - x0)
-    return y0 + t * (y1 - y0)
+    """Linear interpolation between two points."""
+    return float(np.interp(x, [x0, x1], [y0, y1]))
 
 
-def moving_average(values: Sequence[float], window: int) -> List[float]:
-    """
-    Compute moving average of a sequence.
-    
-    Args:
-        values: Input sequence
-        window: Window size for averaging
-        
-    Returns:
-        List of moving averages
-    """
+def moving_average(values: ArrayLike, window: int) -> np.ndarray:
+    """Compute moving average using numpy convolution."""
     if window <= 0:
         raise ValueError("Window size must be positive")
     
-    n = len(values)
-    if n == 0:
-        return []
+    arr = np.asarray(values, dtype=float)
+    if len(arr) == 0:
+        return np.array([])
     
-    result = []
-    window_sum = 0.0
-    
-    for i, val in enumerate(values):
-        window_sum += val
-        if i >= window:
-            window_sum -= values[i - window]
-            result.append(window_sum / window)
-        else:
-            result.append(window_sum / (i + 1))
-    
+    kernel = np.ones(window) / window
+    # Use 'same' mode and handle edges
+    result = np.convolve(arr, kernel, mode='same')
+    # Fix edge effects
+    for i in range(min(window - 1, len(arr))):
+        result[i] = np.mean(arr[:i + 1])
     return result
 
 
-def exponential_moving_average(
-    values: Sequence[float], 
-    alpha: float
-) -> List[float]:
-    """
-    Compute exponential moving average.
-    
-    Args:
-        values: Input sequence
-        alpha: Smoothing factor (0 < alpha <= 1)
-        
-    Returns:
-        List of EMA values
-    """
+def exponential_moving_average(values: ArrayLike, alpha: float) -> np.ndarray:
+    """Compute exponential moving average using scipy."""
     if not 0 < alpha <= 1:
         raise ValueError("Alpha must be in (0, 1]")
     
-    if len(values) == 0:
-        return []
+    arr = np.asarray(values, dtype=float)
+    if len(arr) == 0:
+        return np.array([])
     
-    result = [float(values[0])]
-    for val in values[1:]:
-        ema = alpha * val + (1 - alpha) * result[-1]
-        result.append(ema)
-    
+    from scipy.ndimage import uniform_filter1d
+    # EMA can be computed iteratively
+    result = np.zeros_like(arr)
+    result[0] = arr[0]
+    for i in range(1, len(arr)):
+        result[i] = alpha * arr[i] + (1 - alpha) * result[i - 1]
     return result
 
 
-def derivative_estimate(
-    values: Sequence[float],
-    dt: float,
-    method: str = "backward"
-) -> List[float]:
-    """
-    Estimate derivative of a discrete signal.
-    
-    Args:
-        values: Input sequence
-        dt: Time step
-        method: "backward", "forward", or "central"
-        
-    Returns:
-        List of derivative estimates
-    """
+def derivative_estimate(values: ArrayLike, dt: float, method: str = "backward") -> np.ndarray:
+    """Estimate derivative using numpy.gradient or diff."""
     if dt <= 0:
         raise ValueError("Time step must be positive")
     
-    n = len(values)
-    if n < 2:
-        return [0.0] * n
+    arr = np.asarray(values, dtype=float)
+    if len(arr) < 2:
+        return np.zeros_like(arr)
     
-    result = []
-    
-    if method == "backward":
-        result.append(0.0)
-        for i in range(1, n):
-            result.append((values[i] - values[i-1]) / dt)
-    
+    if method == "central":
+        return np.gradient(arr, dt)
+    elif method == "backward":
+        result = np.zeros_like(arr)
+        result[1:] = np.diff(arr) / dt
+        return result
     elif method == "forward":
-        for i in range(n - 1):
-            result.append((values[i+1] - values[i]) / dt)
-        result.append(result[-1] if result else 0.0)
-    
-    elif method == "central":
-        result.append((values[1] - values[0]) / dt if n > 1 else 0.0)
-        for i in range(1, n - 1):
-            result.append((values[i+1] - values[i-1]) / (2 * dt))
-        result.append((values[-1] - values[-2]) / dt if n > 1 else 0.0)
-    
+        result = np.zeros_like(arr)
+        result[:-1] = np.diff(arr) / dt
+        result[-1] = result[-2] if len(result) > 1 else 0.0
+        return result
     else:
         raise ValueError(f"Unknown method: {method}")
-    
-    return result
 
 
-def rms(values: Sequence[float]) -> float:
-    """
-    Compute root mean square of values.
-    
-    Args:
-        values: Input sequence
-        
-    Returns:
-        RMS value
-    """
-    if len(values) == 0:
+def rms(values: ArrayLike) -> float:
+    """Compute root mean square using numpy."""
+    arr = np.asarray(values, dtype=float)
+    if len(arr) == 0:
         return 0.0
-    return math.sqrt(sum(v * v for v in values) / len(values))
+    return float(np.sqrt(np.mean(arr ** 2)))
 
 
-def integrate_trapezoid(values: Sequence[float], dt: float) -> float:
-    """
-    Integrate using trapezoidal rule.
-    
-    Args:
-        values: Input sequence
-        dt: Time step
-        
-    Returns:
-        Integral value
-    """
-    if len(values) < 2:
+def integrate_trapezoid(values: ArrayLike, dt: float) -> float:
+    """Integrate using numpy's trapezoid function."""
+    arr = np.asarray(values, dtype=float)
+    if len(arr) < 2:
         return 0.0
-    
-    total = 0.0
-    for i in range(1, len(values)):
-        total += (values[i] + values[i-1]) * dt / 2
-    
-    return total
+    return float(np.trapz(arr, dx=dt))
 
 
 def sign(x: float) -> int:
     """Return sign of x: -1, 0, or 1."""
-    if x > 0:
-        return 1
-    elif x < 0:
-        return -1
-    return 0
+    return int(np.sign(x))
 
 
 def deadband(value: float, threshold: float) -> float:
-    """
-    Apply deadband to a value.
-    
-    Args:
-        value: Input value
-        threshold: Deadband threshold (positive)
-        
-    Returns:
-        0 if |value| < threshold, else value
-    """
-    if abs(value) < threshold:
-        return 0.0
-    return value
+    """Apply deadband to a value."""
+    return 0.0 if abs(value) < threshold else value
