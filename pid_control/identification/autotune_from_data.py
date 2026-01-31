@@ -70,6 +70,16 @@ class AutotuneFromDataResult:
         return "\n".join(lines)
 
 
+@dataclass
+class PerformanceRequirements:
+    """Performance requirements to guide PID optimization."""
+    max_overshoot_pct: Optional[float] = None
+    max_settling_time: Optional[float] = None
+    settling_band: float = 0.02
+    overshoot_penalty_weight: float = 200.0
+    settling_penalty_weight: float = 200.0
+
+
 class AutotuneFromData:
     """
     Complete workflow for PID autotuning from experimental CSV data.
@@ -117,7 +127,9 @@ class AutotuneFromData:
         optimizer: str = 'differential_evolution',
         bounds_scale: float = 2.0,
         max_iterations: int = 50,
-        cost_function: Optional[Callable] = None
+        cost_function: Optional[Callable] = None,
+        requirements: Optional[PerformanceRequirements] = None,
+        prompt_for_requirements: bool = False
     ) -> AutotuneFromDataResult:
         """
         Perform complete autotuning from data.
@@ -129,6 +141,8 @@ class AutotuneFromData:
             bounds_scale: Scale factor for parameter bounds around initial guess
             max_iterations: Maximum optimization iterations
             cost_function: Custom cost function (if None, uses default)
+            requirements: Performance requirements (overshoot %, settling time)
+            prompt_for_requirements: Prompt for requirements if not provided
         
         Returns:
             AutotuneFromDataResult with complete analysis
@@ -155,8 +169,19 @@ class AutotuneFromData:
         
         bounds = self._create_bounds(initial_gains, bounds_scale)
         
+        if requirements is None and prompt_for_requirements:
+            requirements = self._prompt_requirements()
+        
+        if requirements is not None:
+            print("\nPerformance requirements:")
+            if requirements.max_overshoot_pct is not None:
+                print(f"  Max overshoot: {requirements.max_overshoot_pct:.2f}%")
+            if requirements.max_settling_time is not None:
+                print(f"  Max settling time: {requirements.max_settling_time:.4f}s")
+            print(f"  Settling band: ±{requirements.settling_band * 100:.1f}%")
+        
         if cost_function is None:
-            cost_function = self._create_default_cost_function(id_result.model)
+            cost_function = self._create_default_cost_function(id_result.model, requirements)
         
         tuner = self._create_tuner(optimizer, bounds, cost_function)
         
@@ -239,7 +264,8 @@ class AutotuneFromData:
     
     def _create_default_cost_function(
         self,
-        model: TransferFunctionModel
+        model: TransferFunctionModel,
+        requirements: Optional[PerformanceRequirements] = None
     ) -> Callable:
         """
         Create default cost function based on identified model.
@@ -254,7 +280,14 @@ class AutotuneFromData:
         if model.model_type == "FOPDT":
             num = [model.K]
             den = [model.tau, 1]
-        else:
+        elif model.model_type == "SECOND_ORDER":
+            # G(s) = K*wn^2 / (s^2 + 2*zeta*wn*s + wn^2)
+            wn = 1.0 / model.tau if model.tau > 0 else 1.0
+            zeta = model.zeta if model.zeta is not None else 0.7
+            wn2 = wn ** 2
+            num = [model.K * wn2]
+            den = [1, 2 * zeta * wn, wn2]
+        else:  # SOPDT
             num = [model.K]
             den = [model.tau * model.tau2, model.tau + model.tau2, 1]
         
@@ -262,59 +295,127 @@ class AutotuneFromData:
         plant_discrete = signal.cont2discrete((plant_sys.num, plant_sys.den), dt, method='zoh')
         
         def cost_function(kp: float, ki: float, kd: float) -> float:
-            """Evaluate PID performance on identified model."""
+            """Evaluate PID performance on identified model using time-domain simulation."""
             if kp < 0 or ki < 0 or kd < 0:
                 return 1e10
             
+            if kp > 1000 or ki > 1000 or kd > 1000:
+                return 1e10
+            
             try:
-                pid_num = [kd, kp, ki]
-                pid_den = [0, 1, 0]
-                pid_sys = signal.TransferFunction(pid_num, pid_den)
-                pid_discrete = signal.cont2discrete((pid_sys.num, pid_sys.den), dt, method='tustin')
+                n_steps = len(t)
+                setpoint = 1.0
                 
-                closed_loop = signal.TransferFunction(
-                    np.convolve(plant_discrete[0].flatten(), pid_discrete[0].flatten()),
-                    np.convolve(plant_discrete[1].flatten(), pid_discrete[1].flatten()) +
-                    np.convolve(plant_discrete[0].flatten(), pid_discrete[0].flatten())
-                )
+                y = np.zeros(n_steps)
+                u = np.zeros(n_steps)
+                error_integral = 0.0
+                error_prev = 0.0
                 
-                setpoint = np.ones(len(t))
-                _, y_response = signal.dlsim(
-                    (closed_loop.num, closed_loop.den),
-                    setpoint,
-                    t=t
-                )
+                delay_samples = int(model.theta / dt) if model.theta > 0 else 0
+                u_delayed = np.zeros(max(delay_samples + 1, 10))
                 
-                y_response = y_response.flatten()
+                y1 = 0.0
+                y2 = 0.0
                 
-                error = setpoint - y_response
-                iae = np.sum(np.abs(error)) * dt
+                for i in range(n_steps):
+                    error = setpoint - y[i]
+                    error_integral += error * dt
+                    error_derivative = (error - error_prev) / dt if i > 0 else 0.0
+                    
+                    u[i] = kp * error + ki * error_integral + kd * error_derivative
+                    u[i] = np.clip(u[i], -10, 10)
+                    
+                    u_delayed = np.roll(u_delayed, 1)
+                    u_delayed[0] = u[i]
+                    
+                    u_to_plant = u_delayed[min(delay_samples, len(u_delayed) - 1)]
+                    
+                    if i < n_steps - 1:
+                        if model.model_type == "FOPDT":
+                            dydt = (model.K * u_to_plant - y[i]) / model.tau
+                        else:
+                            dy1dt = (model.K * u_to_plant - y1) / model.tau
+                            dy2dt = (y1 - y2) / model.tau2
+                            y1 = y1 + dy1dt * dt
+                            y2 = y2 + dy2dt * dt
+                            dydt = dy2dt
+                        
+                        y[i + 1] = y[i] + dydt * dt
+                    
+                    error_prev = error
                 
-                overshoot = max(0, np.max(y_response) - 1.0)
+                error = setpoint - y
+                iae = np.sum(np.abs(error)) * dt # Integral Absolute Error
+                ise = np.sum(error ** 2) * dt # Integral Square Error
                 
-                settling_threshold = 0.02
-                settled_idx = len(y_response) - 1
-                for i in range(len(y_response) - 1, -1, -1):
-                    if abs(y_response[i] - 1.0) > settling_threshold:
-                        settled_idx = i
-                        break
-                settling_time = t[settled_idx] if settled_idx < len(t) else t[-1]
+                if abs(setpoint) > 1e-9:
+                    overshoot = max(0.0, np.max(y) - setpoint) / abs(setpoint) * 100.0
+                else:
+                    overshoot = max(0.0, np.max(y) - setpoint) * 100.0
                 
-                control_effort = kp + ki + kd
+                settling_band = requirements.settling_band if requirements is not None else 0.02
+                settling_threshold = settling_band * abs(setpoint)
+                within_band = np.abs(y - setpoint) <= settling_threshold
+                outside_idx = np.where(~within_band)[0]
+                if len(outside_idx) == 0:
+                    settling_time = t[0]
+                else:
+                    last_outside = outside_idx[-1]
+                    settling_time = t[min(last_outside + 1, len(t) - 1)]
+                
+                control_variation = np.sum(np.abs(np.diff(u))) * dt
+                
+                if np.max(np.abs(y)) > 100 or np.max(np.abs(u)) > 50:
+                    return 1e10
+                
+                requirements_penalty = 0.0
+                if requirements is not None:
+                    if requirements.max_overshoot_pct is not None:
+                        overshoot_violation = max(0.0, overshoot - requirements.max_overshoot_pct)
+                        requirements_penalty += (overshoot_violation ** 2) * requirements.overshoot_penalty_weight
+                    if requirements.max_settling_time is not None:
+                        settling_violation = max(0.0, settling_time - requirements.max_settling_time)
+                        requirements_penalty += (settling_violation ** 2) * requirements.settling_penalty_weight
                 
                 cost = (
+                    ise * 100.0 +
                     iae * 10.0 +
-                    overshoot * 100.0 +
-                    settling_time * 5.0 +
-                    control_effort * 0.01
+                    overshoot * 50.0 +
+                    settling_time * 2.0 +
+                    control_variation * 0.1 +
+                    requirements_penalty
                 )
                 
-                if np.any(np.isnan(y_response)) or np.any(np.isinf(y_response)):
+                if np.any(np.isnan(y)) or np.any(np.isinf(y)):
                     return 1e10
                 
                 return cost
                 
-            except Exception:
+            except Exception as e:
                 return 1e10
         
         return cost_function
+
+    def _prompt_requirements(self) -> PerformanceRequirements:
+        """Prompt user for performance requirements."""
+        print("\nEnter performance requirements (press Enter to skip a field).")
+        
+        def _parse_optional_float(prompt: str) -> Optional[float]:
+            value = input(prompt).strip()
+            if not value:
+                return None
+            try:
+                return float(value)
+            except ValueError:
+                print("  Invalid number, ignoring.")
+                return None
+        
+        max_overshoot = _parse_optional_float("Max overshoot (%): ")
+        max_settling = _parse_optional_float("Max settling time (s): ")
+        settling_band = _parse_optional_float("Settling band (% of setpoint, default 2): ")
+        
+        return PerformanceRequirements(
+            max_overshoot_pct=max_overshoot,
+            max_settling_time=max_settling,
+            settling_band=(settling_band / 100.0) if settling_band is not None else 0.02
+        )

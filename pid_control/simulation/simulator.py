@@ -69,7 +69,7 @@ class Simulator:
     def __init__(
         self,
         plant: BasePlant,
-        pid_params: Optional[PIDParams] = None,
+        controller: Optional[PIDController] = None,
         csv_log_path: Optional[str] = None
     ):
         """
@@ -81,10 +81,9 @@ class Simulator:
             csv_log_path: Optional path for CSV logging
         """
         self._plant = plant
-        self._params = pid_params or PIDParams()
+        self._controller = controller or PIDController()
         self._csv_path = csv_log_path
         
-        self._controller: Optional[PIDController] = None
         self._results: List[SimulationResult] = []
         self._plotter = PIDPlotter()
     
@@ -109,10 +108,7 @@ class Simulator:
         self._plant.reset()
         self._plant.set_noise(scenario.measurement_noise_std)
         
-        self._controller = PIDController(
-            self._params.copy(sample_time=scenario.sample_time),
-            csv_path=self._csv_path
-        )
+        self._controller.reset()
         
         # Allocate arrays
         n_steps = int(scenario.duration / scenario.sample_time)
@@ -176,7 +172,7 @@ class Simulator:
             d_terms=d_terms,
             disturbances=disturbances,
             scenario_name=scenario.name,
-            controller_params=self._params.to_dict(),
+            controller_params=self._controller.params.to_dict() if hasattr(self._controller, 'params') else None,
             plant_info=self._plant.get_info(),
             execution_time=execution_time
         )
@@ -202,8 +198,8 @@ class Simulator:
         results = {}
         
         for name, params in param_sets.items():
-            # Update parameters
-            self._params = params
+            # Update controller parameters
+            self._controller.set_params(params)
             
             # Run simulation
             result = self.run(scenario)
@@ -297,14 +293,15 @@ class Simulator:
             Analysis metrics dictionary
         """
         analyzer = PIDAnalyzer(data=result.to_dict())
+        params = self._controller.params if hasattr(self._controller, 'params') else None
         return analyzer.analyze(
-            output_limits=(self._params.output_min, self._params.output_max)
-            if self._params.output_min is not None else None
+            output_limits=(params.output_min, params.output_max)
+            if params and params.output_min is not None else None
         )
     
     def set_params(self, params: PIDParams) -> None:
         """Update PID parameters."""
-        self._params = params
+        self._controller.set_params(params)
     
     def set_plant(self, plant: BasePlant) -> None:
         """Update plant model."""

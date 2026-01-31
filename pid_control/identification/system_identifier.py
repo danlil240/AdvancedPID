@@ -19,7 +19,8 @@ from pid_control.identification.csv_reader import ExperimentalData
 class ModelType(Enum):
     """Types of transfer function models."""
     FOPDT = "First Order Plus Dead Time"
-    SOPDT = "Second Order Plus Dead Time"
+    SOPDT = "Second Order Plus Dead Time (two real poles)"
+    SECOND_ORDER = "Second Order (wn, zeta parameterization)"
     AUTO = "Automatic Selection (Best Fit)"
 
 
@@ -44,6 +45,9 @@ class TransferFunctionModel:
             return f"FOPDT: K={self.K:.3f}, tau={self.tau:.3f}, theta={self.theta:.3f}"
         elif self.model_type == "SOPDT":
             return f"SOPDT: K={self.K:.3f}, tau1={self.tau:.3f}, tau2={self.tau2:.3f}, theta={self.theta:.3f}"
+        elif self.model_type == "SECOND_ORDER":
+            wn = 1.0 / self.tau if self.tau > 0 else 1.0
+            return f"SecondOrder: K={self.K:.3f}, wn={wn:.3f}, zeta={self.zeta:.3f}, theta={self.theta:.3f}"
         return f"Model: K={self.K:.3f}, tau={self.tau:.3f}, theta={self.theta:.3f}"
 
 
@@ -133,23 +137,24 @@ class SystemIdentifier:
             IdentificationResult with model and recommended gains
         """
         if model_type == ModelType.AUTO:
-            fopdt_model = self._optimize_model(ModelType.FOPDT)
-            sopdt_model = self._optimize_model(ModelType.SOPDT)
+            # Try all model types and pick the best fit
+            candidates = []
             
-            fopdt_sim = self._simulate_model(fopdt_model)
-            sopdt_sim = self._simulate_model(sopdt_model)
+            for mtype in [ModelType.FOPDT, ModelType.SOPDT, ModelType.SECOND_ORDER]:
+                try:
+                    m = self._optimize_model(mtype)
+                    sim = self._simulate_model(m)
+                    fit = self._calculate_fit_quality(self.data.output, sim)
+                    candidates.append((m, sim, fit))
+                except Exception:
+                    continue
             
-            fopdt_fit = self._calculate_fit_quality(self.data.output, fopdt_sim)
-            sopdt_fit = self._calculate_fit_quality(self.data.output, sopdt_sim)
+            if not candidates:
+                raise ValueError("All model identification attempts failed")
             
-            if sopdt_fit > fopdt_fit:
-                model = sopdt_model
-                simulated_output = sopdt_sim
-                fit_quality = sopdt_fit
-            else:
-                model = fopdt_model
-                simulated_output = fopdt_sim
-                fit_quality = fopdt_fit
+            # Pick best fit
+            best = max(candidates, key=lambda x: x[2])
+            model, simulated_output, fit_quality = best
         else:
             model = self._optimize_model(model_type)
             simulated_output = self._simulate_model(model)
@@ -346,6 +351,10 @@ class SystemIdentifier:
     
     def _optimize_model(self, model_type: ModelType, use_multistart: bool = True) -> TransferFunctionModel:
         """Optimize model parameters to minimize prediction error with multi-start."""
+        # Handle SECOND_ORDER separately
+        if model_type == ModelType.SECOND_ORDER:
+            return self._optimize_second_order()
+        
         y = self.data.output
         initial_model = self._get_initial_guess(model_type)
         
@@ -473,6 +482,75 @@ class SystemIdentifier:
                 tau2=result.x[2], model_type="SOPDT"
             )
     
+    def _optimize_second_order(self) -> TransferFunctionModel:
+        """Optimize second-order model with (K, wn, zeta, theta) parameterization."""
+        y = self.data.output
+        
+        # Estimate initial parameters
+        delta_y = np.max(y) - np.min(y)
+        delta_u = np.max(self.data.input) - np.min(self.data.input)
+        K_init = delta_y / delta_u if abs(delta_u) > 1e-6 else 1.0
+        
+        # Estimate natural frequency from response
+        time_span = self.data.time[-1] - self.data.time[0]
+        wn_init = 2.0 * np.pi / (time_span / 3)  # rough estimate
+        zeta_init = 0.5  # start with underdamped
+        theta_init = 0.01
+        
+        def objective(params):
+            K, wn, zeta, theta = params
+            if wn <= 0 or zeta < 0 or zeta > 2.0 or theta < 0:
+                return 1e10
+            
+            # Create second-order model: G(s) = K*wn^2 / (s^2 + 2*zeta*wn*s + wn^2)
+            model = TransferFunctionModel(
+                K=K, tau=1.0/wn, theta=theta, zeta=zeta, model_type="SECOND_ORDER"
+            )
+            y_sim = self._simulate_model(model)
+            return self._weighted_error(y, y_sim)
+        
+        bounds = [
+            (K_init * 0.1, K_init * 10),
+            (wn_init * 0.1, wn_init * 10),
+            (0.01, 2.0),  # zeta
+            (0, time_span * 0.3)  # theta
+        ]
+        
+        # Multi-start optimization
+        best_result = None
+        best_cost = float('inf')
+        
+        initial_guesses = [
+            [K_init, wn_init, 0.3, theta_init],
+            [K_init, wn_init, 0.5, theta_init],
+            [K_init, wn_init, 0.7, theta_init],
+            [K_init, wn_init * 0.7, 0.4, theta_init],
+            [K_init, wn_init * 1.3, 0.4, theta_init],
+        ]
+        
+        for x0 in initial_guesses:
+            x0 = [max(bounds[i][0], min(bounds[i][1], x0[i])) for i in range(4)]
+            
+            try:
+                result = optimize.minimize(
+                    objective, x0, method='L-BFGS-B', bounds=bounds,
+                    options={'maxiter': 3000, 'ftol': 1e-10, 'gtol': 1e-10}
+                )
+                
+                if result.fun < best_cost:
+                    best_cost = result.fun
+                    best_result = result
+            except Exception:
+                continue
+        
+        if best_result is None:
+            raise ValueError("SECOND_ORDER optimization failed")
+        
+        K, wn, zeta, theta = best_result.x
+        return TransferFunctionModel(
+            K=K, tau=1.0/wn, theta=theta, zeta=zeta, model_type="SECOND_ORDER"
+        )
+    
     def _simulate_model(self, model: TransferFunctionModel) -> np.ndarray:
         """Simulate model response to input signal."""
         t = self.data.time
@@ -482,7 +560,14 @@ class SystemIdentifier:
         if model.model_type == "FOPDT":
             num = [model.K]
             den = [model.tau, 1]
-        else:
+        elif model.model_type == "SECOND_ORDER":
+            # G(s) = K*wn^2 / (s^2 + 2*zeta*wn*s + wn^2)
+            wn = 1.0 / model.tau if model.tau > 0 else 1.0
+            zeta = model.zeta if model.zeta is not None else 0.7
+            wn2 = wn ** 2
+            num = [model.K * wn2]
+            den = [1, 2 * zeta * wn, wn2]
+        else:  # SOPDT
             num = [model.K]
             den = [model.tau * model.tau2, model.tau + model.tau2, 1]
         
