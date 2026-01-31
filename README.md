@@ -20,6 +20,19 @@ A professional-grade, modular Python library for PID control with advanced featu
   - Output rate limiting
   - Efficient CSV logging with buffering
 
+### System Identification & Autotuning from CSV Data 🆕
+- **Identify system dynamics from experimental data**:
+  - Load CSV files with input/output measurements
+  - Estimate transfer function parameters (FOPDT, SOPDT)
+  - Multiple identification methods (step response, optimization)
+  - Robust to measurement noise
+- **Complete autotuning workflow**:
+  - CSV Data → System ID → Analytical Tuning → Numerical Optimization
+  - Compare multiple tuning rules (Ziegler-Nichols, Cohen-Coon, IMC, Lambda)
+  - Optimize gains with differential evolution, genetic algorithms, etc.
+  - Comprehensive visualizations and fit quality metrics
+- **Perfect for real systems** where you have data but no model
+
 ### Real-Time Tuner
 - **Multiple optimization algorithms**:
   - Nelder-Mead (gradient-free)
@@ -73,6 +86,12 @@ AdvancedPID/
 │   │   ├── pid_controller.py    # Main PID controller
 │   │   ├── pid_params.py        # Parameter configuration
 │   │   └── filters.py           # Signal filters
+│   ├── identification/          # 🆕 System identification
+│   │   ├── __init__.py
+│   │   ├── csv_reader.py        # Load experimental data
+│   │   ├── system_identifier.py # Transfer function estimation
+│   │   ├── autotune_from_data.py # Complete workflow
+│   │   └── visualizer.py        # Visualization tools
 │   ├── tuner/
 │   │   ├── __init__.py
 │   │   ├── realtime_tuner.py    # Real-time tuning
@@ -183,6 +202,40 @@ sim.plot_results(result, comprehensive=True)
 Simulator.show()
 ```
 
+### System Identification from CSV Data 🆕
+
+```python
+from pid_control.identification.autotune_from_data import AutotuneFromData
+
+# Load your experimental data and get optimal PID gains
+autotuner = AutotuneFromData('your_system_data.csv')
+result = autotuner.autotune()
+
+# Print results
+print(result.summary())
+print(f"\nOptimal PID Gains:")
+print(f"Kp = {result.optimized_gains['kp']:.4f}")
+print(f"Ki = {result.optimized_gains['ki']:.4f}")
+print(f"Kd = {result.optimized_gains['kd']:.4f}")
+
+# Visualize results
+from pid_control.identification.visualizer import IdentificationVisualizer
+IdentificationVisualizer.plot_autotune_comparison(result, autotuner.data)
+```
+
+**CSV Format Required:**
+```csv
+timestamp,output,measurement,setpoint
+0.00,0.0,25.2,50.0
+0.01,5.2,25.3,50.0
+0.02,8.1,25.5,50.0
+...
+```
+
+**Note:** Column names match `CSVLogger` output format.
+
+See [SYSTEM_IDENTIFICATION_GUIDE.md](SYSTEM_IDENTIFICATION_GUIDE.md) for complete documentation.
+
 ### Auto-Tuning
 
 ```python
@@ -228,6 +281,12 @@ PIDAnalyzer.show_plots()
 ```bash
 # Basic demo
 python examples/demo_basic.py
+
+# System identification from CSV data 🆕
+python examples/demo_system_identification.py
+
+# Quick autotune from CSV (minimal example) 🆕
+python examples/demo_quick_autotune_from_csv.py
 
 # Auto-tuning demo
 python examples/demo_tuning.py
