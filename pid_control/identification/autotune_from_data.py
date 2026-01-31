@@ -75,7 +75,7 @@ class PerformanceRequirements:
     """Performance requirements to guide PID optimization."""
     max_overshoot_pct: Optional[float] = None
     max_settling_time: Optional[float] = None
-    settling_band: float = 0.02
+    settling_band: float = 0.02  # Fraction of setpoint (0.02 = 2%)
     overshoot_penalty_weight: float = 200.0
     settling_penalty_weight: float = 200.0
 
@@ -178,7 +178,7 @@ class AutotuneFromData:
                 print(f"  Max overshoot: {requirements.max_overshoot_pct:.2f}%")
             if requirements.max_settling_time is not None:
                 print(f"  Max settling time: {requirements.max_settling_time:.4f}s")
-            print(f"  Settling band: ±{requirements.settling_band * 100:.1f}%")
+            print(f"  Settling band: +/-{requirements.settling_band * 100:.1f}%")
         
         if cost_function is None:
             cost_function = self._create_default_cost_function(id_result.model, requirements)
