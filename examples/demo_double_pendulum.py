@@ -22,7 +22,7 @@ import matplotlib.gridspec as gridspec
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod
-from pid_control.plants.double_pendulum import DoublePendulumCart
+from pid_control.envs import DoublePendulumEnv
 
 
 def run_stabilization_test():
@@ -33,8 +33,8 @@ def run_stabilization_test():
     print("Double Inverted Pendulum Stabilization Test")
     print("=" * 70)
     
-    # Create double pendulum with initial disturbance
-    plant = DoublePendulumCart(
+    # Create double pendulum with initial disturbance via Gymnasium env
+    env = DoublePendulumEnv(
         cart_mass=1.0,
         pendulum1_mass=0.1,
         pendulum2_mass=0.1,
@@ -44,8 +44,10 @@ def run_stabilization_test():
         sample_time=0.005,  # Small timestep for stability
         initial_angle1=0.15,  # ~8.6 degrees
         initial_angle2=0.10,  # ~5.7 degrees
-        control_mode='position'
+        control_mode='position',
+        render_mode='human',
     )
+    plant = env.plant
     
     print(f"\nPlant Configuration:")
     info = plant.get_info()
@@ -101,6 +103,7 @@ def run_stabilization_test():
     print(f"\nRunning simulation for {duration}s...")
     
     setpoint = 0.0  # Keep cart at origin
+    env.reset()
     
     for i in range(n_steps):
         t = i * dt
@@ -116,18 +119,14 @@ def run_stabilization_test():
         force_pos = pos_controller.update(setpoint, cart_pos, timestamp=t)
         
         # State feedback for pendulum stabilization
-        # Force to counteract pendulum angles and velocities
         force_stabilize = (K_theta1 * theta1 + K_theta1_dot * theta1_dot +
                           K_theta2 * theta2 + K_theta2_dot * theta2_dot)
         
         # Combined control force
-        force = force_pos + force_stabilize
+        force = np.clip(force_pos + force_stabilize, pos_params.output_min, pos_params.output_max)
         
-        # Apply output limits
-        force = np.clip(force, pos_params.output_min, pos_params.output_max)
-        
-        # Update plant
-        plant.update(force)
+        # Step env (fires live render automatically)
+        env.step(np.array([force]))
         
         # Store data
         times[i] = t
@@ -240,8 +239,8 @@ def create_animated_visualization():
     print("Animated Double Pendulum Visualization")
     print("=" * 70)
     
-    # Create system
-    plant = DoublePendulumCart(
+    # Create system via Gymnasium env
+    env = DoublePendulumEnv(
         cart_mass=1.0,
         pendulum1_mass=0.1,
         pendulum2_mass=0.1,
@@ -253,6 +252,7 @@ def create_animated_visualization():
         initial_angle2=0.15,
         control_mode='position'
     )
+    plant = env.plant
     
     params = PIDParams(
         kp=80.0, ki=2.0, kd=35.0,

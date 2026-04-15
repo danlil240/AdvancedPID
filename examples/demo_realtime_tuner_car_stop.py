@@ -11,19 +11,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod
-from pid_control.plants.nonlinear import FrictionPlant
+from pid_control.envs import FrictionPlantEnv
 from pid_control.simulation.simulator import Simulator
 from pid_control.simulation.scenarios import SimulationScenario, SetpointType
 from pid_control.tuner.realtime_tuner import RealtimeTuner, CostWeights
 
 
-def build_car_plant(sample_time: float) -> FrictionPlant:
+def build_car_env(sample_time: float) -> FrictionPlantEnv:
     """Car model: mass with friction, controlled by acceleration (force)."""
-    return FrictionPlant(
+    return FrictionPlantEnv(
         mass=1.0,                # unit mass so input ~= acceleration
         viscous_friction=0.35,   # drag-like friction
         coulomb_friction=0.4,    # kinetic friction
@@ -72,8 +73,9 @@ def main() -> None:
         derivative_filter_coeff=10.0
     )
 
-    # Use a fresh plant for tuning
-    plant_for_tuning = build_car_plant(sample_time)
+    # Use a fresh plant for tuning via Gymnasium env
+    env_for_tuning = build_car_env(sample_time)
+    plant_for_tuning = env_for_tuning.plant
     tune_controller = PIDController(bad_params)
 
     tuner = RealtimeTuner(
@@ -81,16 +83,16 @@ def main() -> None:
         plant_for_tuning,
         optimizer="differential_evolution",
         bounds={
-            "kp": (0.0, 4.0),
-            "ki": (0.0, 1.2),
-            "kd": (0.0, 2.0)
+            "kp": (0.0, 8.0),
+            "ki": (0.0, 2.0),
+            "kd": (0.0, 4.0)
         },
         cost_weights=CostWeights(
-            iae=1.0,
-            itae=0.6,
-            overshoot=4.0,
-            settling=2.0,
-            control_effort=0.2
+            iae=0.1,
+            itae=0.0,
+            overshoot=0.0,
+            settling=50.0,
+            control_effort=0.0
         )
     )
 
@@ -122,7 +124,7 @@ def main() -> None:
         setpoint_time=1.0
     )
 
-    sim = Simulator(build_car_plant(sample_time), PIDController(bad_params))
+    sim = Simulator(build_car_env(sample_time).plant, PIDController(bad_params))
     comparison = sim.run_comparison(
         scenario,
         {"Very Bad": bad_params, "Auto-Tuned": tuned_params}
@@ -131,6 +133,20 @@ def main() -> None:
     print("\nPerformance summary:")
     print_metrics("Very Bad", sim, comparison["Very Bad"], target_position)
     print_metrics("Auto-Tuned", sim, comparison["Auto-Tuned"], target_position)
+
+    # --- Gymnasium live-render preview with tuned controller ---
+    print("\nRunning Gymnasium live-render episode with tuned controller...")
+    render_env = build_car_env(sample_time)
+    render_env.render_mode = "human"
+    render_env.set_setpoint(target_position)
+    tuned_ctrl = PIDController(tuned_params)
+    obs, _ = render_env.reset()
+    terminated, truncated = False, False
+    while not (terminated or truncated):
+        pos = obs[0]
+        ctrl = tuned_ctrl.update(target_position, pos)
+        obs, _, terminated, truncated, _ = render_env.step(np.array([ctrl]))
+    render_env.close()
 
     # Plot results
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)

@@ -15,9 +15,10 @@ from pathlib import Path
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import numpy as np
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod
-from pid_control.plants.first_order import FirstOrderPlant
+from pid_control.envs import FirstOrderEnv
 from pid_control.simulation.simulator import Simulator
 from pid_control.simulation.scenarios import ScenarioLibrary
 from pid_control.analyzer.pid_analyzer import PIDAnalyzer
@@ -28,16 +29,33 @@ def main():
     print("Basic PID Controller Demo")
     print("=" * 60)
     
-    # Create a first-order plant
+    # Create a first-order plant via Gymnasium environment
     # This represents a simple thermal system or tank level
-    plant = FirstOrderPlant(
+    env = FirstOrderEnv(
         gain=2.0,          # Output changes by 2x input at steady state
         time_constant=5.0, # 5 second time constant
         sample_time=0.01
     )
+    plant = env.plant
     
-    print(f"\nPlant: {plant.get_info()}")
-    
+    print(f"\nPlant (via Gymnasium env): {plant.get_info()}")
+
+    # --- Gymnasium live-render preview ---
+    render_env = FirstOrderEnv(
+        gain=2.0, time_constant=5.0, sample_time=0.01,
+        setpoint=50.0, max_steps=3000, render_mode="human",
+    )
+    preview_ctrl = PIDController(PIDParams(
+        kp=1.5, ki=0.3, kd=0.5, sample_time=0.01,
+        output_min=-100, output_max=100,
+    ))
+    obs, _ = render_env.reset()
+    terminated, truncated = False, False
+    while not (terminated or truncated):
+        ctrl = preview_ctrl.update(50.0, obs[0])
+        obs, _, terminated, truncated, _ = render_env.step(np.array([ctrl]))
+    render_env.close()
+
     # Configure PID controller
     params = PIDParams(
         kp=1.5,            # Proportional gain

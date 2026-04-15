@@ -24,10 +24,7 @@ import matplotlib.gridspec as gridspec
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod
-from pid_control.plants.first_order import FirstOrderPlant
-from pid_control.plants.second_order import SecondOrderPlant
-from pid_control.plants.nonlinear import NonlinearPlant, FrictionPlant
-from pid_control.plants.delay_plant import FOPDTPlant
+from pid_control.envs import FirstOrderEnv, SecondOrderEnv, NonlinearEnv, FOPDTEnv
 from pid_control.simulation.simulator import Simulator
 from pid_control.simulation.scenarios import SimulationScenario, SetpointType, ScenarioLibrary
 
@@ -41,12 +38,13 @@ def demo_3d_phase_space():
     print("3D Phase Space Trajectory")
     print("=" * 60)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=1.5,
         damping_ratio=0.3,  # Underdamped for interesting trajectory
         sample_time=0.01
     )
+    plant = env.plant
     
     params = PIDParams(
         kp=4.0, ki=2.0, kd=1.5,
@@ -160,7 +158,8 @@ def demo_gain_surface():
     print("PID Gain Performance Surface")
     print("=" * 60)
     
-    plant = FirstOrderPlant(gain=2.0, time_constant=2.0, sample_time=0.05)
+    env = FirstOrderEnv(gain=2.0, time_constant=2.0, sample_time=0.05)
+    plant = env.plant
     
     # Grid of Kp and Ki values
     kp_range = np.linspace(0.5, 5.0, 20)
@@ -234,13 +233,14 @@ def demo_multi_plant_battle():
     print("Multi-Plant Control Battle")
     print("=" * 60)
     
-    plants = {
-        'First Order': FirstOrderPlant(gain=2.0, time_constant=2.0, sample_time=0.01),
-        'Second Order Underdamped': SecondOrderPlant(gain=1.0, natural_frequency=1.5, damping_ratio=0.3, sample_time=0.01),
-        'Second Order Overdamped': SecondOrderPlant(gain=1.0, natural_frequency=1.0, damping_ratio=1.5, sample_time=0.01),
-        'With Dead Time': FOPDTPlant(gain=1.5, time_constant=2.0, dead_time=0.5, sample_time=0.01),
-        'Nonlinear': NonlinearPlant(gain=2.0, time_constant=1.5, saturation_limits=(-30, 30), dead_zone=0.5, sample_time=0.01),
+    envs = {
+        'First Order': FirstOrderEnv(gain=2.0, time_constant=2.0, sample_time=0.01),
+        'Second Order Underdamped': SecondOrderEnv(gain=1.0, natural_frequency=1.5, damping_ratio=0.3, sample_time=0.01),
+        'Second Order Overdamped': SecondOrderEnv(gain=1.0, natural_frequency=1.0, damping_ratio=1.5, sample_time=0.01),
+        'With Dead Time': FOPDTEnv(gain=1.5, time_constant=2.0, dead_time=0.5, sample_time=0.01),
+        'Nonlinear': NonlinearEnv(gain=2.0, time_constant=1.5, saturation_limits=(-30, 30), dead_zone=0.5, sample_time=0.01),
     }
+    plants = {name: e.plant for name, e in envs.items()}
     
     # Aggressive PID that will behave differently on each plant
     params = PIDParams(
@@ -387,9 +387,10 @@ def demo_disturbance_rejection():
     print("Disturbance Rejection Showcase")
     print("=" * 60)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0, natural_frequency=1.5, damping_ratio=0.7, sample_time=0.01
     )
+    plant = env.plant
     
     params = PIDParams(
         kp=5.0, ki=3.0, kd=1.5,
@@ -515,11 +516,12 @@ def demo_robustness_analysis():
     colors_gain = plt.cm.RdYlBu(np.linspace(0, 1, len(gain_variations)))
     
     for mult, color in zip(gain_variations, colors_gain):
-        plant = FirstOrderPlant(
+        env_r = FirstOrderEnv(
             gain=nominal_gain * mult,
             time_constant=nominal_tau,
             sample_time=dt
         )
+        plant = env_r.plant
         controller = PIDController(params)
         
         measurements = []
@@ -549,11 +551,12 @@ def demo_robustness_analysis():
     colors_tau = plt.cm.PuOr(np.linspace(0, 1, len(tau_variations)))
     
     for mult, color in zip(tau_variations, colors_tau):
-        plant = FirstOrderPlant(
+        env_r = FirstOrderEnv(
             gain=nominal_gain,
             time_constant=nominal_tau * mult,
             sample_time=dt
         )
+        plant = env_r.plant
         controller = PIDController(params)
         
         measurements = []
@@ -584,11 +587,12 @@ def demo_robustness_analysis():
     
     for i, tau_mult in enumerate(tau_variations):
         for j, gain_mult in enumerate(gain_variations):
-            plant = FirstOrderPlant(
+            env_r = FirstOrderEnv(
                 gain=nominal_gain * gain_mult,
                 time_constant=nominal_tau * tau_mult,
                 sample_time=dt
             )
+            plant = env_r.plant
             controller = PIDController(params)
             
             total_error = 0.0
@@ -621,11 +625,12 @@ def demo_robustness_analysis():
     
     for i, tau_mult in enumerate(tau_variations):
         for j, gain_mult in enumerate(gain_variations):
-            plant = FirstOrderPlant(
+            env_r = FirstOrderEnv(
                 gain=nominal_gain * gain_mult,
                 time_constant=nominal_tau * tau_mult,
                 sample_time=dt
             )
+            plant = env_r.plant
             controller = PIDController(params)
             
             measurements = []

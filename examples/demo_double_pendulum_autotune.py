@@ -19,14 +19,14 @@ import matplotlib.gridspec as gridspec
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod
-from pid_control.plants.double_pendulum import DoublePendulumCart
+from pid_control.envs import DoublePendulumEnv
 from pid_control.tuner.optimization_methods import GeneticTuner
 
 
 EARLY_EXIT_ANGLE = 0.8  # radians (~46 degrees)
 SUCCESS_ANGLE = 0.6     # radians (~34 degrees)
-TUNE_DURATION = 2.0
-VERIFY_DURATION = 5.0
+TUNE_DURATION = 4.0
+VERIFY_DURATION = 8.0
 
 
 def simulate_pendulum(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot,
@@ -37,8 +37,8 @@ def simulate_pendulum(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot
     
     Returns cost metric (lower is better).
     """
-    # Create plant
-    plant = DoublePendulumCart(
+    # Create plant via Gymnasium env
+    env = DoublePendulumEnv(
         cart_mass=1.0,
         pendulum1_mass=0.1,
         pendulum2_mass=0.1,
@@ -51,6 +51,7 @@ def simulate_pendulum(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot
         control_mode='position',
         integrator='rk4'
     )
+    plant = env.plant
     
     # Create controller
     pos_params = PIDParams(
@@ -116,11 +117,12 @@ def simulate_pendulum(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot
                 return cost, max_angle
             return cost
     
-    # Cost function: penalize position error, control effort, and instability
+    # Cost function: heavily penalize instability
     cost = (
-        total_error * 100 +           # Position error
-        total_control_effort * 0.01 + # Control effort
-        max_angle * 1000              # Maximum angle deviation
+        total_error * 10 +            # Position error (reduced weight)
+        total_control_effort * 0.001 + # Control effort (reduced weight)  
+        max_angle * 10000 +           # Maximum angle deviation (increased weight)
+        (max_angle > 0.3) * 50000     # Large penalty for significant instability
     )
     
     if verbose:
@@ -142,20 +144,20 @@ def autotune_position_pid():
     print("\nAutotuning position PID controller...")
     print("State feedback gains are fixed:")
     
-    # Fixed state feedback gains (these work well)
-    K_theta1 = 120.0
-    K_theta1_dot = 25.0
-    K_theta2 = 80.0
-    K_theta2_dot = 20.0
+    # Improved state feedback gains for better stabilization
+    K_theta1 = 200.0
+    K_theta1_dot = 40.0
+    K_theta2 = 150.0
+    K_theta2_dot = 35.0
     
     print(f"  K_theta1={K_theta1}, K_theta1_dot={K_theta1_dot}")
     print(f"  K_theta2={K_theta2}, K_theta2_dot={K_theta2_dot}")
     
-    # Set up tuner with bounds
+    # Set up tuner with expanded bounds and allow integral control
     bounds = {
-        'kp': (1.0, 100.0),
-        'ki': (0.0, 10.0),
-        'kd': (1.0, 20.0)
+        'kp': (50.0, 300.0),
+        'ki': (0.0, 5.0),
+        'kd': (20.0, 80.0)
     }
 
     # Define cost function for tuner
@@ -169,16 +171,16 @@ def autotune_position_pid():
         return simulate_pendulum(kp, ki, kd, K_theta1, K_theta1_dot,
                                 K_theta2, K_theta2_dot, duration=TUNE_DURATION)
 
-    # Genetic tuner config
-    max_attempts = 2
-    max_iterations = 50
-    population_size = 30
+    # Genetic tuner config with more iterations for better convergence
+    max_attempts = 3
+    max_iterations = 80
+    population_size = 40
     
     mutation_rate = 0.15
     crossover_rate = 0.8
     
-    # Initial guess
-    initial_params = {'kp': 10.0, 'ki': 0.5, 'kd': 5.0}
+    # Initial guess based on previous results
+    initial_params = {'kp': 200.0, 'ki': 0.5, 'kd': 50.0}
     
     print(f"\nInitial parameters: Kp={initial_params['kp']}, Ki={initial_params['ki']}, Kd={initial_params['kd']}")
     print("\nOptimizing with genetic algorithm... (this may take a bit)")
@@ -263,8 +265,8 @@ def run_animated_demo(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot
     print("RUNNING ANIMATED DEMO")
     print(f"{'='*70}")
     
-    # Create plant
-    plant = DoublePendulumCart(
+    # Create plant via Gymnasium env
+    env = DoublePendulumEnv(
         cart_mass=1.0,
         pendulum1_mass=0.1,
         pendulum2_mass=0.1,
@@ -277,6 +279,7 @@ def run_animated_demo(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot
         control_mode='position',
         integrator='rk4'
     )
+    plant = env.plant
     
     # Create controller
     pos_params = PIDParams(
@@ -356,7 +359,7 @@ def run_animated_demo(kp, ki, kd, K_theta1, K_theta1_dot, K_theta2, K_theta2_dot
         )
         
         force = pos_control + angle_feedback
-        plant.update(force)
+        env.step(np.array([force]))
         
         t = frame * plant.sample_time
         

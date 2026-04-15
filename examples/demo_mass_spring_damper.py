@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod
-from pid_control.plants.second_order import SecondOrderPlant
+from pid_control.envs import SecondOrderEnv
 from pid_control.simulation.simulator import Simulator
 from pid_control.simulation.scenarios import SimulationScenario, SetpointType
 from pid_control.identification import SystemIdentifier, CSVDataReader, ModelType
@@ -52,12 +52,13 @@ def demo_open_loop():
     for name, zeta in damping_configs.items():
         print(f"\nTesting {name}...")
         
-        plant = SecondOrderPlant(
+        env = SecondOrderEnv(
             gain=1.0,
             natural_frequency=2.0,
             damping_ratio=zeta,
             sample_time=0.01
         )
+        plant = env.plant
         
         # Simulate step input
         duration = 5.0
@@ -132,12 +133,13 @@ def demo_closed_loop_simple():
     print("DEMO 2: CLOSED-LOOP CONTROL - SIMPLE PID")
     print("=" * 70)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=2.0,
         damping_ratio=0.3,
         sample_time=0.01
     )
+    plant = env.plant
     
     print("\nSystem: Underdamped mass-spring-damper")
     print("  Natural frequency: 2.0 rad/s")
@@ -217,12 +219,13 @@ def demo_closed_loop_advanced(csv_path):
     from pathlib import Path
     Path(csv_path).parent.mkdir(parents=True, exist_ok=True)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=2.0,
         damping_ratio=0.3,
         sample_time=0.01
     )
+    plant = env.plant
     
     # Advanced PID with features
     params = PIDParams(
@@ -377,12 +380,13 @@ def demo_autotuning():
     Path(autotune_csv).parent.mkdir(parents=True, exist_ok=True)
     
     # Create test system
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=1.5,
         damping_ratio=0.4,
         sample_time=0.01
     )
+    plant = env.plant
     
     # Run with basic controller to generate data
     basic_params = PIDParams(kp=5.0, ki=1.0, kd=1.0, sample_time=0.01)
@@ -479,7 +483,24 @@ def main():
     print("\nThis demo shows PID control of a classic second-order mechanical system.")
     print("The mass-spring-damper is fundamental in mechanical engineering and")
     print("represents many real systems: suspension systems, robotic joints, etc.")
-    
+
+    # --- Gymnasium live-render preview ---
+    print("\nStarting Gymnasium live-render preview (closed-loop step response)...")
+    render_env = SecondOrderEnv(
+        gain=1.0, natural_frequency=2.0, damping_ratio=0.7,
+        sample_time=0.01, setpoint=1.0, max_steps=500, render_mode="human",
+    )
+    preview_ctrl = PIDController(PIDParams(
+        kp=10.0, ki=5.0, kd=2.0, sample_time=0.01,
+        output_min=-50.0, output_max=50.0,
+    ))
+    obs, _ = render_env.reset()
+    terminated, truncated = False, False
+    while not (terminated or truncated):
+        ctrl = preview_ctrl.update(1.0, obs[0])
+        obs, _, terminated, truncated, _ = render_env.step(np.array([ctrl]))
+    render_env.close()
+
     demo_open_loop() # Open loop response
     demo_closed_loop_simple() # Closed loop response with simple PID
     csv_path = "output/demo_closed_loop_advanced.csv"

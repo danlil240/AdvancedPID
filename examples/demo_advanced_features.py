@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams, AntiWindupMethod, DerivativeMode
-from pid_control.plants.second_order import SecondOrderPlant
+from pid_control.envs import SecondOrderEnv
 from pid_control.simulation.simulator import Simulator
 from pid_control.simulation.scenarios import SimulationScenario, SetpointType
 
@@ -31,12 +31,13 @@ def demo_anti_windup():
     print("Anti-Windup Methods Comparison")
     print("=" * 60)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=1.0,
         damping_ratio=0.5,
         sample_time=0.01
     )
+    plant = env.plant
     
     # Tight output limits to force saturation
     base_params = PIDParams(
@@ -91,12 +92,13 @@ def demo_derivative_filtering():
     print("Derivative Filtering Demo")
     print("=" * 60)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=2.0,
         damping_ratio=0.7,
         sample_time=0.01
     )
+    plant = env.plant
     
     # Heavy noise to show filtering effect
     scenario = SimulationScenario(
@@ -137,12 +139,13 @@ def demo_setpoint_weighting():
     print("Setpoint Weighting (2-DOF PID) Demo")
     print("=" * 60)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=1.5,
         damping_ratio=0.3,  # Underdamped - prone to overshoot
         sample_time=0.01
     )
+    plant = env.plant
     
     scenario = SimulationScenario(
         name="Setpoint Weighting Test",
@@ -181,12 +184,13 @@ def demo_bumpless_transfer():
     print("Bumpless Transfer Demo")
     print("=" * 60)
     
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=1.0,
         damping_ratio=0.7,
         sample_time=0.01
     )
+    plant = env.plant
     
     duration = 30.0
     dt = 0.01
@@ -205,11 +209,13 @@ def demo_bumpless_transfer():
     
     # Controller with bumpless transfer
     ctrl_nobump = PIDController(initial_params)
-    plant_nobump = SecondOrderPlant(gain=1.0, natural_frequency=1.0, damping_ratio=0.7, sample_time=dt)
+    env_nobump = SecondOrderEnv(gain=1.0, natural_frequency=1.0, damping_ratio=0.7, sample_time=dt)
+    plant_nobump = env_nobump.plant
     
     # Controller without bumpless transfer
     ctrl_bump = PIDController(initial_params)
-    plant_bump = SecondOrderPlant(gain=1.0, natural_frequency=1.0, damping_ratio=0.7, sample_time=dt)
+    env_bump = SecondOrderEnv(gain=1.0, natural_frequency=1.0, damping_ratio=0.7, sample_time=dt)
+    plant_bump = env_bump.plant
     
     meas_nobump = 0.0
     meas_bump = 0.0

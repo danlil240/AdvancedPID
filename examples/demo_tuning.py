@@ -13,10 +13,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import numpy as np
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams
-from pid_control.plants.first_order import FirstOrderPlant
-from pid_control.plants.delay_plant import FOPDTPlant
+from pid_control.envs import FOPDTEnv
 from pid_control.tuner.realtime_tuner import RealtimeTuner, CostWeights
 from pid_control.simulation.simulator import Simulator
 from pid_control.simulation.scenarios import ScenarioLibrary
@@ -27,15 +27,16 @@ def main():
     print("PID Auto-Tuning Demo")
     print("=" * 60)
     
-    # Create a challenging FOPDT plant (common in process control)
-    plant = FOPDTPlant(
+    # Create a challenging FOPDT plant (common in process control) via Gymnasium env
+    env = FOPDTEnv(
         gain=1.5,
         time_constant=3.0,
         dead_time=1.0,
         sample_time=0.01
     )
+    plant = env.plant
     
-    print(f"\nPlant: {plant.get_info()}")
+    print(f"\nPlant (via Gymnasium env): {plant.get_info()}")
     
     # Get tuning suggestions based on plant model
     suggestions = plant.get_tuning_suggestions()
@@ -139,7 +140,21 @@ def main():
     # Plot comparison
     print("\nGenerating comparison plots...")
     sim.plot_comparison(comparison_results, title="Controller Comparison: Initial vs Tuned")
-    
+
+    # --- Gymnasium live-render episode with tuned controller ---
+    print("\nRunning Gymnasium live-render episode with auto-tuned controller...")
+    render_env = FOPDTEnv(
+        gain=1.5, time_constant=3.0, dead_time=1.0, sample_time=0.01,
+        setpoint=100.0, max_steps=5000, render_mode="human",
+    )
+    tuned_ctrl = PIDController(tuned_params)
+    obs, _ = render_env.reset()
+    terminated, truncated = False, False
+    while not (terminated or truncated):
+        ctrl = tuned_ctrl.update(100.0, obs[0])
+        obs, _, terminated, truncated, _ = render_env.step(np.array([ctrl]))
+    render_env.close()
+
     Simulator.show()
 
 

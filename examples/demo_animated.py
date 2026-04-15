@@ -18,7 +18,7 @@ from matplotlib.widgets import Slider, Button
 
 from pid_control.core.pid_controller import PIDController
 from pid_control.core.pid_params import PIDParams
-from pid_control.plants.second_order import SecondOrderPlant
+from pid_control.envs import SecondOrderEnv
 
 
 def run_interactive_simulation():
@@ -33,12 +33,13 @@ def run_interactive_simulation():
     
     # Setup
     dt = 0.02
-    plant = SecondOrderPlant(
+    env = SecondOrderEnv(
         gain=1.0,
         natural_frequency=1.5,
         damping_ratio=0.5,
         sample_time=dt
     )
+    plant = env.plant
     
     params = PIDParams(
         kp=2.0, ki=1.0, kd=0.5,
@@ -143,7 +144,7 @@ def run_interactive_simulation():
         current_idx[0] = 0
         measurement[0] = 0.0
         controller.reset()
-        plant.reset()
+        env.reset()
         data['t'][:] = 0
         data['sp'][:] = 0
         data['meas'][:] = 0
@@ -243,9 +244,10 @@ def run_animated_comparison():
         'Aggressive': PIDParams(kp=5.0, ki=2.5, kd=1.0, sample_time=dt),
     }
     
-    plants = {name: SecondOrderPlant(
+    envs = {name: SecondOrderEnv(
         gain=1.0, natural_frequency=1.5, damping_ratio=0.5, sample_time=dt
     ) for name in configs}
+    plants = {name: envs[name].plant for name in configs}
     
     controllers = {name: PIDController(params) for name, params in configs.items()}
     measurements = {name: 0.0 for name in configs}

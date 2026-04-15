@@ -17,6 +17,14 @@ from pid_control.tuner.realtime_tuner import RealtimeTuner
 from pid_control.analyzer.pid_analyzer import PIDAnalyzer
 from pid_control.simulation.simulator import Simulator
 from pid_control.identification.system_identifier import SystemIdentifier
+from pid_control.envs import (
+    FirstOrderEnv,
+    SecondOrderEnv,
+    NonlinearEnv,
+    FrictionPlantEnv,
+    FOPDTEnv,
+    DoublePendulumEnv,
+)
 
 __version__ = "1.0.0"
 __all__ = [
@@ -26,4 +34,10 @@ __all__ = [
     "PIDAnalyzer",
     "Simulator",
     "SystemIdentifier",
+    "FirstOrderEnv",
+    "SecondOrderEnv",
+    "NonlinearEnv",
+    "FrictionPlantEnv",
+    "FOPDTEnv",
+    "DoublePendulumEnv",
 ]
