@@ -1,50 +1,49 @@
 # Advanced PID Control Library
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#known-limitations)
 
-A professional-grade, modular Python library for PID control with advanced features, real-time tuning, comprehensive analysis, and stunning visualizations.
+A Python library for SISO PID control with a typed autotune pipeline
+(`PIDAutotuner`), stability/robustness validation, system identification,
+simulation, and analysis.  Designed to fail loudly on bad data rather
+than silently produce wrong gains.
+
+> **Status:** v0.2 refactor is complete (see [PLAN.md](PLAN.md) and
+> [CHANGES.md](CHANGES.md)).  Legacy `AutotuneFromData` / `RealtimeTuner`
+> still work through a deprecation shim — prefer `PIDAutotuner`.
 
 ## ✨ Features
 
-### Core PID Controller
-- **Robust Implementation** with all professional features:
-  - Proportional, Integral, Derivative control
-  - **Multiple anti-windup methods**: Clamping, Back-calculation, Conditional integration
-  - **Derivative filtering** to reduce noise amplification
-  - **Derivative on measurement** to avoid derivative kick on setpoint changes
-  - **Setpoint weighting** (2-DOF PID) for reduced overshoot
-  - **Bumpless transfer** for smooth parameter changes
-  - Output saturation with proper integral handling
-  - Error deadband
-  - Output rate limiting
-  - Efficient CSV logging with buffering
+### `PIDAutotuner` — Unified autotune façade *(primary API)*
+- **One pipeline**: Experiment → Identify → Tune → Validate.
+- **Typed results** (`TuneResult`): `status`, typed `warnings` with stable
+  codes (`W_GAIN_CLIPPED`, `W_LOW_MARGIN`, `E_DATA_FLAT`, …), and a
+  confidence score in [0, 1].
+- **Honest failure**: flat or integrator-like data is rejected with
+  `Status.FAILED` and `E_*` error codes instead of silent zero-gain
+  controllers.
+- **Stability & robustness validation**: gain/phase margin, Ms, Mt, delay
+  margin, and ±20 %/±50 % parameter perturbation sweeps.
+- **Classical rules as first-class citizens**: Ziegler-Nichols, Cohen-Coon,
+  IMC, SIMC (Skogestad), AMIGO — each pluggable via `.set_rule(...)`.
+- **Numerical refinement backends**: Differential Evolution (default),
+  Nelder-Mead, CMA-ES, and Bayesian Optimization (real `sklearn` GP).
+- **Reports & plots**: `result.report("text"|"md"|"json")`, headless-safe
+  `result.plot(save_path=...)`, JSON persistence via `result.save()`.
+- **CLI**: `pidtune csv …` / `pidtune plant fopdt …` / `pidtune bench …`.
 
-### System Identification & Autotuning from CSV Data 🆕
-- **Identify system dynamics from experimental data**:
-  - Load CSV files with input/output measurements
-  - Estimate transfer function parameters (FOPDT, SOPDT)
-  - Multiple identification methods (step response, optimization)
-  - Robust to measurement noise
-- **Complete autotuning workflow**:
-  - CSV Data → System ID → Analytical Tuning → Numerical Optimization
-  - Compare multiple tuning rules (Ziegler-Nichols, Cohen-Coon, IMC, Lambda)
-  - Optimize gains with differential evolution, genetic algorithms, etc.
-  - Comprehensive visualizations and fit quality metrics
-- **Perfect for real systems** where you have data but no model
-
-### Real-Time Tuner
-- **Multiple optimization algorithms**:
-  - Nelder-Mead (gradient-free)
-  - Bayesian Optimization
-  - Genetic Algorithm
-  - Differential Evolution
-- **Classical tuning methods**:
-  - Ziegler-Nichols (step response)
-  - Relay feedback auto-tune
-  - Cohen-Coon
-  - IMC tuning
-- Configurable cost functions with multiple objectives
+### Core PID Controller *(preserved from v0.1)*
+- Proportional, Integral, Derivative control
+- **Anti-windup**: Clamping, Back-calculation, Conditional integration
+- **Derivative filtering** (first-order, configurable `N`)
+- **Derivative on measurement** to avoid setpoint-change kick
+- **Setpoint weighting** (2-DOF PID: `b`, `c`)
+- **Bumpless transfer** for online gain changes
+- Output saturation with proper integral handling
+- **Error deadband** now suppresses P, I, **and** D (bug fix in v0.2)
+- Output rate limiting
+- Efficient CSV logging with buffering
 
 ### Analyzer
 - **Comprehensive metrics**:
@@ -80,57 +79,40 @@ A professional-grade, modular Python library for PID control with advanced featu
 ```
 AdvancedPID/
 ├── pid_control/
-│   ├── __init__.py
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── pid_controller.py    # Main PID controller
-│   │   ├── pid_params.py        # Parameter configuration
-│   │   └── filters.py           # Signal filters
-│   ├── identification/          # 🆕 System identification
-│   │   ├── __init__.py
-│   │   ├── csv_reader.py        # Load experimental data
-│   │   ├── system_identifier.py # Transfer function estimation
-│   │   ├── autotune_from_data.py # Complete workflow
-│   │   └── visualizer.py        # Visualization tools
-│   ├── tuner/
-│   │   ├── __init__.py
-│   │   ├── realtime_tuner.py    # Real-time tuning
-│   │   └── optimization_methods.py
-│   ├── analyzer/
-│   │   ├── __init__.py
-│   │   ├── pid_analyzer.py      # Main analyzer
-│   │   ├── metrics.py           # Performance metrics
-│   │   └── plots.py             # Visualization
-│   ├── simulation/
-│   │   ├── __init__.py
-│   │   ├── simulator.py         # Simulation engine
-│   │   └── scenarios.py         # Test scenarios
-│   ├── plants/
-│   │   ├── __init__.py
-│   │   ├── base_plant.py
-│   │   ├── first_order.py
-│   │   ├── second_order.py
-│   │   ├── nonlinear.py
-│   │   └── delay_plant.py
-│   ├── logging/
-│   │   ├── __init__.py
-│   │   ├── csv_logger.py
-│   │   └── data_buffer.py
-│   └── utils/
-│       ├── __init__.py
-│       ├── validators.py
-│       └── math_utils.py
+│   ├── core/                    # PIDController, PIDParams, filters
+│   ├── plants/                  # FOPDT, SOPDT, FrictionPlant, …
+│   ├── envs/                    # Gymnasium wrappers
+│   ├── autotune/                # ★ Unified pipeline (v0.2)
+│   │   ├── types.py             #   Frozen dataclasses (TuneResult, …)
+│   │   ├── api.py               #   PIDAutotuner façade
+│   │   ├── compat.py            #   Deprecation shim for v0.1 APIs
+│   │   ├── experiments/         #   step / relay / chirp / from_data
+│   │   ├── identification/      #   fopdt, sopdt, ipdt, AIC selector
+│   │   ├── rules/               #   ZN, CC, IMC, SIMC, AMIGO
+│   │   ├── tuning/              #   DE, NM, CMA-ES, BO + cost
+│   │   ├── validation/          #   margins, robustness, confidence
+│   │   └── diagnostics/         #   reports, plots, data-quality
+│   ├── cli/                     # `pidtune` entry point
+│   ├── analyzer/                # Offline metrics & plots
+│   ├── simulation/              # Scenario simulator
+│   ├── logging/                 # CSV logger + buffer
+│   ├── identification/          # (legacy) FOPDT / SOPDT ID + autotune
+│   ├── tuner/                   # (legacy) RealtimeTuner
+│   └── utils/                   # Shared helpers
 ├── examples/
-│   ├── demo_basic.py
-│   ├── demo_tuning.py
-│   ├── demo_advanced_features.py
-│   ├── demo_spectacular_simulations.py
-│   └── demo_animated.py
-├── tests/
-│   ├── test_pid_controller.py
-│   └── test_plants.py
-├── requirements.txt
-└── README.md
+│   ├── 01_quickstart_plant.py   # ★ start here
+│   ├── 02_quickstart_csv.py
+│   ├── 03_from_plant_objective.py
+│   ├── 04_relay_autotune.py
+│   ├── 05_compare_rules.py
+│   ├── 06_diagnosing_bad_data.py
+│   ├── data/                    # Sample CSV datasets
+│   └── advanced/                # Legacy interactive demos
+├── benchmarks/                  # Plant zoo, smoke & full runs, baseline
+├── tests/                       # 97 tests across 7 files
+├── tools/run_examples.py        # Headless CI runner
+├── docs/                        # MIGRATION.md, ARCHITECTURE.md
+└── .github/workflows/ci.yml     # pytest + example runner
 ```
 
 ## 🚀 Quick Start
@@ -202,61 +184,59 @@ sim.plot_results(result, comprehensive=True)
 Simulator.show()
 ```
 
-### System Identification from CSV Data 🆕
+### Autotune from CSV data *(recommended)*
 
 ```python
-from pid_control.identification.autotune_from_data import AutotuneFromData
+from pid_control.autotune import PIDAutotuner
 
-# Load your experimental data and get optimal PID gains
-autotuner = AutotuneFromData('your_system_data.csv')
-result = autotuner.autotune()
+result = PIDAutotuner.from_csv("examples/data/fopdt_step.csv").tune()
 
-# Print results
-print(result.summary())
-print(f"\nOptimal PID Gains:")
-print(f"Kp = {result.optimized_gains['kp']:.4f}")
-print(f"Ki = {result.optimized_gains['ki']:.4f}")
-print(f"Kd = {result.optimized_gains['kd']:.4f}")
+print(result.report())                # human-readable summary
+if result.is_usable:
+    ctrl = result.build_controller()  # ready-to-run PIDController
+else:
+    for w in result.warnings:
+        print(w.severity.value, w.code.value, w.message)
 
-# Visualize results
-from pid_control.identification.visualizer import IdentificationVisualizer
-IdentificationVisualizer.plot_autotune_comparison(result, autotuner.data)
+result.save("output/result.json")     # reload later with TuneResult.load
 ```
 
-**CSV Format Required:**
-```csv
-timestamp,output,measurement,setpoint
-0.00,0.0,25.2,50.0
-0.01,5.2,25.3,50.0
-0.02,8.1,25.5,50.0
-...
-```
-
-**Note:** Column names match `CSVLogger` output format.
-
-See [SYSTEM_IDENTIFICATION_GUIDE.md](SYSTEM_IDENTIFICATION_GUIDE.md) for complete documentation.
-
-### Auto-Tuning
+**CSV column mapping** — default expects `timestamp,output,measurement`
+(matching this library's `CSVLogger`).  Override for generic data:
 
 ```python
-from pid_control import PIDController, PIDParams, RealtimeTuner
+PIDAutotuner.from_csv(
+    "your.csv",
+    columns={"time": "t", "input": "u", "output": "y"},
+).tune()
+```
+
+See [USAGE_TUTORIAL.md](USAGE_TUTORIAL.md) and
+[docs/MIGRATION.md](docs/MIGRATION.md) for the full workflow.
+
+### Autotune from a plant model
+
+```python
+from pid_control.autotune import PIDAutotuner, Objective
 from pid_control.plants import FOPDTPlant
 
-# Create plant and initial controller
-plant = FOPDTPlant(gain=2.0, time_constant=3.0, dead_time=0.5)
-initial_params = PIDParams(kp=1.0, ki=0.5, kd=0.1)
-controller = PIDController(initial_params)
-
-# Create tuner and auto-tune
-tuner = RealtimeTuner(
-    controller, 
-    plant,
-    optimizer='differential_evolution'
+plant  = FOPDTPlant(gain=2.0, time_constant=3.0, dead_time=0.5)
+result = (
+    PIDAutotuner.from_plant(plant)
+    .with_objective(Objective(max_overshoot_pct=5.0, min_phase_margin_deg=45))
+    .with_actuator_limits(lower=-10.0, upper=10.0)
+    .tune()
 )
+print(result.gains.kp, result.gains.ki, result.gains.kd)
+print(result.confidence.score)        # 0..1 aggregate trust score
+```
 
-result = tuner.auto_tune(setpoint=100.0, duration=30.0)
+### CLI
 
-print(f"Optimized: Kp={result.kp:.3f}, Ki={result.ki:.3f}, Kd={result.kd:.3f}")
+```bash
+pidtune csv examples/data/fopdt_step.csv --rule simc -o result.json
+pidtune plant fopdt --K 1.5 --tau 3.0 --theta 0.5
+pidtune bench --suite smoke
 ```
 
 ### Analyzing Logged Data
@@ -278,28 +258,24 @@ PIDAnalyzer.show_plots()
 
 ## 🎮 Running Examples
 
+All six golden examples run headlessly and write artifacts under
+`./output/`.  They are also exercised by CI on every push.
+
 ```bash
-# Basic demo
-python examples/demo_basic.py
+python examples/01_quickstart_plant.py --output ./output
+python examples/02_quickstart_csv.py
+python examples/03_from_plant_objective.py
+python examples/04_relay_autotune.py
+python examples/05_compare_rules.py
+python examples/06_diagnosing_bad_data.py    # shows a FAILED result on bad data
 
-# System identification from CSV data 🆕
-python examples/demo_system_identification.py
-
-# Quick autotune from CSV (minimal example) 🆕
-python examples/demo_quick_autotune_from_csv.py
-
-# Auto-tuning demo
-python examples/demo_tuning.py
-
-# Advanced features (anti-windup, filtering, etc.)
-python examples/demo_advanced_features.py
-
-# Spectacular visualizations (3D plots, surfaces, etc.)
-python examples/demo_spectacular_simulations.py
-
-# Interactive animated simulation
-python examples/demo_animated.py
+# Or run them all through the headless CI runner:
+python -m tools.run_examples
 ```
+
+Legacy interactive demos (`demo_basic.py`, `demo_animated.py`,
+`demo_double_pendulum*.py`, …) live under `examples/advanced/` and may
+open blocking plot or Gym render windows.
 
 ## 🧪 Running Tests
 
@@ -362,6 +338,31 @@ PIDParams(
 4. **Use back-calculation anti-windup** - most robust method
 5. **Set reasonable output limits** - prevents actuator damage
 6. **Log data for analysis** - use the CSV logger
+
+## Known Limitations
+
+- **SISO only** — the library tunes a single PID loop at a time. MIMO plants, cascade loops, and feedforward structures are out of scope.
+- **Linear-model identification** — the autotune pipeline fits FOPDT / SOPDT transfer functions. Highly nonlinear, time-varying, or unstable-open-loop plants will produce poor fits and unreliable gains.
+- **No real-time guarantees** — pure Python with NumPy/SciPy. Not suitable for hard-real-time embedded control without a compiled wrapper.
+- **Real-hardware relay autotune is experimental** — the biased-ATV
+  relay experiment (`RelayExperiment`) has unit-test coverage on
+  simulated plants but has not been validated on physical hardware;
+  always compose it with `SafeExperiment` / abort limits first.
+- **Identification is offline** — the pipeline expects a recorded step
+  or relay response; it does not currently perform closed-loop
+  identification while a plant is running in production.
+
+## When *Not* to Use PID
+
+PID control is a workhorse, but it is the wrong tool when:
+
+| Situation | Better alternative |
+|---|---|
+| The plant is significantly nonlinear across its operating range | Gain-scheduled PID, MPC, or adaptive control |
+| Multiple interacting loops (MIMO) | Decoupling + multi-loop PID, or full MPC |
+| The plant is open-loop unstable *and* has large dead time | State-feedback or model-predictive control |
+| You need optimal trajectories, not setpoint tracking | Trajectory optimization / optimal control |
+| Safety-critical hard-real-time (< 1 ms) | C/C++ control libraries with RTOS integration |
 
 ## 🤝 Contributing
 

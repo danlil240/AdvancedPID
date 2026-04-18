@@ -58,11 +58,11 @@ def print_menu():
 def run_demo(demo_name: str):
     """Run a specific demo."""
     demos = {
-        '1': ('examples.demo_basic', 'Basic PID Demo'),
-        '2': ('examples.demo_tuning', 'Auto-Tuning Demo'),
-        '3': ('examples.demo_advanced_features', 'Advanced Features Demo'),
-        '4': ('examples.demo_spectacular_simulations', 'Spectacular Simulations'),
-        '5': ('examples.demo_animated', 'Interactive Animated Demo'),
+        '1': ('examples.advanced.demo_basic', 'Basic PID Demo'),
+        '2': ('examples.advanced.demo_tuning', 'Auto-Tuning Demo'),
+        '3': ('examples.advanced.demo_advanced_features', 'Advanced Features Demo'),
+        '4': ('examples.advanced.demo_spectacular_simulations', 'Spectacular Simulations'),
+        '5': ('examples.advanced.demo_animated', 'Interactive Animated Demo'),
     }
     
     if demo_name not in demos:

@@ -7,6 +7,7 @@ Estimates transfer function models from input-output data using optimization:
 - Automatic selection of best fit
 """
 
+import warnings as _warnings
 from typing import Optional, Tuple, Dict, Any
 from dataclasses import dataclass
 import numpy as np
@@ -689,11 +690,29 @@ class SystemIdentifier:
         
         else:
             raise ValueError(f"Unknown tuning rule: {rule}")
-        
-        kp = max(0.0, min(abs(kp), 1000.0))
-        ki = max(0.0, min(abs(ki), 100.0))
-        kd = max(0.0, min(abs(kd), 100.0))
-        
+
+        # PLAN T1.5 / C1 / M4: clamp gains to a safe envelope but surface
+        # a W_GAIN_CLIPPED-equivalent UserWarning whenever it fires, instead
+        # of silently capping.  Users on the new pipeline (PIDAutotuner) see
+        # the typed WarningCode.W_GAIN_CLIPPED on TuneResult; this legacy
+        # path emits Python UserWarnings so headless scripts can still catch
+        # them via ``warnings.catch_warnings``.
+        def _bounded(name: str, value: float, hi: float) -> float:
+            raw = abs(value)
+            if raw > hi:
+                _warnings.warn(
+                    f"W_GAIN_CLIPPED: {name}={raw:.3g} clamped to {hi:.3g} "
+                    f"(rule={rule}). Consider migrating to PIDAutotuner "
+                    f"which reports this as a typed warning.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+            return max(0.0, min(raw, hi))
+
+        kp = _bounded("kp", kp, 1000.0)
+        ki = _bounded("ki", ki, 100.0)
+        kd = _bounded("kd", kd, 100.0)
+
         return {'kp': kp, 'ki': ki, 'kd': kd}
     
     def compare_tuning_rules(self) -> Dict[str, Dict[str, float]]:

@@ -136,6 +136,11 @@ class BayesianTuner(BaseTuner):
     """
     Bayesian optimization tuner using Gaussian Process surrogate.
     
+    .. deprecated::
+        This implementation uses a kernel-weighted average, not a real GP.
+        Use :class:`pid_control.autotune.tuning.bo.BOTuner` for proper
+        Bayesian optimisation with ``sklearn.gaussian_process``.
+
     Efficient for expensive-to-evaluate cost functions.
     Uses Expected Improvement acquisition function.
     """
@@ -156,6 +161,13 @@ class BayesianTuner(BaseTuner):
             n_initial: Number of initial random samples
             exploration_weight: Trade-off between exploration and exploitation
         """
+        import warnings as _w
+        _w.warn(
+            "BayesianTuner is deprecated — it does not use a real Gaussian "
+            "process. Use pid_control.autotune.tuning.BOTuner instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(bounds, cost_function)
         self._n_initial = n_initial
         self._xi = exploration_weight

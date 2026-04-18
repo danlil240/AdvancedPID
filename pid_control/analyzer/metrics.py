@@ -135,11 +135,13 @@ class PerformanceMetrics:
         abs_errors = np.abs(errors)
         sq_errors = errors ** 2
         
-        # Use numpy trapz for integration
-        iae = np.trapz(abs_errors, timestamps)
-        ise = np.trapz(sq_errors, timestamps)
-        itae = np.trapz(timestamps * abs_errors, timestamps)
-        itse = np.trapz(timestamps * sq_errors, timestamps)
+        # Trapezoidal integration (np.trapezoid on numpy>=2.0,
+        # fallback to np.trapz on older versions).
+        trapezoid = getattr(np, "trapezoid", getattr(np, "trapz", None))
+        iae = trapezoid(abs_errors, timestamps)
+        ise = trapezoid(sq_errors, timestamps)
+        itae = trapezoid(timestamps * abs_errors, timestamps)
+        itse = trapezoid(timestamps * sq_errors, timestamps)
         
         return ErrorMetrics(
             iae=iae, ise=ise, itae=itae, itse=itse,

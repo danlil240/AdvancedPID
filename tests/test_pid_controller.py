@@ -191,7 +191,44 @@ class TestPIDController:
         # Error of 10 is outside deadband
         output = pid.update(setpoint=100.0, measurement=90.0)
         assert output != 0.0
-    
+
+    def test_error_deadband_suppresses_all_terms(self):
+        """Regression (C4): deadband must suppress P, I and D, not only I.
+
+        Before the fix, ``setpoint_weight_p < 1`` or ``kd != 0`` caused output
+        to be non-zero inside the deadband because the P- and D-terms used an
+        independently-derived error that bypassed the deadband mask.
+        """
+        params = PIDParams(
+            kp=2.0, ki=1.0, kd=0.5,
+            setpoint_weight_p=0.8,
+            error_deadband=5.0,
+            sample_time=0.01,
+        )
+        pid = PIDController(params)
+
+        # First tick: inside deadband. All terms must be zero.
+        out1 = pid.update(setpoint=100.0, measurement=97.0)
+        assert out1 == 0.0, f"expected 0.0, got {out1}"
+
+        # A second tick still in deadband must also produce 0 (derivative filter
+        # must not have been charged by the first call).
+        out2 = pid.update(setpoint=100.0, measurement=96.5)
+        assert out2 == 0.0, f"expected 0.0 on second tick, got {out2}"
+
+        # Outside deadband the controller must respond again.
+        out3 = pid.update(setpoint=100.0, measurement=80.0)
+        assert out3 != 0.0
+
+    def test_error_deadband_preserves_feedforward(self):
+        """Deadband suppresses error-driven control, but feedforward must pass
+        through unchanged so external references (e.g. gravity compensation)
+        keep acting."""
+        params = PIDParams(kp=1.0, error_deadband=5.0)
+        pid = PIDController(params)
+        out = pid.update(setpoint=100.0, measurement=98.0, feedforward=7.5)
+        assert out == 7.5
+
     def test_context_manager(self):
         """Test context manager protocol."""
         params = PIDParams(kp=1.0)

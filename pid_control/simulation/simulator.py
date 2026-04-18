@@ -69,19 +69,25 @@ class Simulator:
     def __init__(
         self,
         plant: BasePlant,
-        controller: Optional[PIDController] = None,
+        controller: Optional[Any] = None,
         csv_log_path: Optional[str] = None
     ):
         """
         Initialize simulator.
-        
+
         Args:
             plant: Plant model to simulate
-            pid_params: PID controller parameters
+            controller: ``PIDController`` instance, or a ``PIDParams`` which
+                will be wrapped in a new ``PIDController`` for convenience.
             csv_log_path: Optional path for CSV logging
         """
         self._plant = plant
-        self._controller = controller or PIDController()
+        if controller is None:
+            self._controller = PIDController(csv_path=csv_log_path)
+        elif isinstance(controller, PIDParams):
+            self._controller = PIDController(controller, csv_path=csv_log_path)
+        else:
+            self._controller = controller
         self._csv_path = csv_log_path
         
         self._results: List[SimulationResult] = []

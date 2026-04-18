@@ -1,6 +1,34 @@
+# Byte-compiled / cache
 *.pyc
+*.cpython-*.pyc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build artefacts
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Generated data
 *.csv
 *.png
-*.cpython-311.pyc
+!examples/data/*.csv
+!tests/fixtures/*.csv
 
+# Logs (e.g. from numeric solvers)
+*.log
+
+# Output directory used by examples and benchmarks
+output/
 ./output
+benchmarks/results/*.json
+!benchmarks/results/baseline_pre_refactor.json
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,630 @@
+{
+  "suite": "smoke",
+  "seed": 0,
+  "max_iter": 25,
+  "elapsed_seconds": 634.9959295000008,
+  "summary": {
+    "total_cases": 18,
+    "ok": 18,
+    "errors": 0,
+    "stable": 14,
+    "stable_fraction": 0.7777777777777778,
+    "median_iae": 1.129596933139645,
+    "median_overshoot_pct": 13.017258609399672,
+    "median_settling_time": 4.04
+  },
+  "results": [
+    {
+      "case_id": "fopdt_K0.5_tau5.0_th0.5",
+      "description": "FOPDT K=0.5 \u03c4=5.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 57.04684961686629,
+        "ki": 16.974713998453044,
+        "kd": 11.982319155369627
+      },
+      "identified_model": {
+        "model_type": "SOPDT",
+        "K": 0.49995064691604774,
+        "tau": 4.9921401777346635,
+        "theta": 0.42008697187817967
+      },
+      "fit_quality": 0.9999993313739222,
+      "improvement": 52.68785952218622,
+      "score": {
+        "iae": 5.184469376326128,
+        "ise": 2.3375022883214016,
+        "itae": 44.15761004359467,
+        "rise_time": 19.399086680371493,
+        "settling_time_2pct": 19.990000000000002,
+        "overshoot_percent": 10.599469296453146,
+        "steady_state_error": 0.04294087178546191,
+        "control_tv": 480.0,
+        "control_rms": 8.444518868040342,
+        "control_peak": 10.0,
+        "saturation_fraction": 0.561,
+        "stable": false
+      },
+      "error": null,
+      "elapsed_seconds": 45.280093000001216
+    },
+    {
+      "case_id": "fopdt_K0.5_tau2.0_th0.5",
+      "description": "FOPDT K=0.5 \u03c4=2.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 7.259702058597487,
+        "ki": 4.986810432903678,
+        "kd": 1.8210035210915656
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 0.5000277499424541,
+        "tau": 1.9956672191696838,
+        "theta": 0.49000014214415194
+      },
+      "fit_quality": 0.9999999742838148,
+      "improvement": 60.55161809835301,
+      "score": {
+        "iae": 1.1256616393885819,
+        "ise": 0.7513869374633072,
+        "itae": 1.0386496331295139,
+        "rise_time": 0.419405763314464,
+        "settling_time_2pct": 4.01,
+        "overshoot_percent": 36.44300130709899,
+        "steady_state_error": -8.406906282232285e-09,
+        "control_tv": 14.019377700348189,
+        "control_rms": 2.534058716138453,
+        "control_peak": 9.802975379378363,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 49.740138600001956
+    },
+    {
+      "case_id": "fopdt_K0.5_tau1.0_th0.5",
+      "description": "FOPDT K=0.5 \u03c4=1.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 3.592464944700401,
+        "ki": 2.3930954995340814,
+        "kd": 0.704480808254714
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 0.500000830911973,
+        "tau": 0.9950166220696042,
+        "theta": 0.4998891523450109
+      },
+      "fit_quality": 0.9999999999144352,
+      "improvement": 94.89086982510268,
+      "score": {
+        "iae": 0.9307909660499187,
+        "ise": 0.6915694020118577,
+        "itae": 0.7052748282473769,
+        "rise_time": 0.48640898745862604,
+        "settling_time_2pct": 3.0300000000000002,
+        "overshoot_percent": 11.965755508288956,
+        "steady_state_error": 1.1312576307931366e-06,
+        "control_tv": 5.6391177415052365,
+        "control_rms": 2.1092476132263718,
+        "control_peak": 4.812943649462783,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 51.400872700000036
+    },
+    {
+      "case_id": "fopdt_K0.5_tau1.0_th1.0",
+      "description": "FOPDT K=0.5 \u03c4=1.0s \u03b8=1.0s",
+      "status": "ok",
+      "gains": {
+        "kp": 2.2255575168416053,
+        "ki": 1.1994458345085355,
+        "kd": 0.8545723398737014
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 0.5000017241967087,
+        "tau": 0.995041763789651,
+        "theta": 0.9998587302236449
+      },
+      "fit_quality": 0.9999999997223553,
+      "improvement": 52.18102905178057,
+      "score": {
+        "iae": 1.792412175337962,
+        "ise": 1.340082995242448,
+        "itae": 2.5329858071307223,
+        "rise_time": 0.8726998156305399,
+        "settling_time_2pct": 5.48,
+        "overshoot_percent": 9.779667141823323,
+        "steady_state_error": 7.211508148363688e-05,
+        "control_tv": 3.8362012798548832,
+        "control_rms": 2.0492194959450503,
+        "control_peak": 3.4369978096952263,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 47.598663299999316
+    },
+    {
+      "case_id": "fopdt_K1.0_tau5.0_th0.5",
+      "description": "FOPDT K=1.0 \u03c4=5.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 11.82279797983205,
+        "ki": 8.184488845547014,
+        "kd": 3.6071630374796064
+      },
+      "identified_model": {
+        "model_type": "SOPDT",
+        "K": 0.9999218595291878,
+        "tau": 4.992711196362924,
+        "theta": 0.4278091193556617
+      },
+      "fit_quality": 0.9999993339992939,
+      "improvement": 63.4656771493493,
+      "score": {
+        "iae": 1.2140149520243966,
+        "ise": 0.7969105443849974,
+        "itae": 1.2625878282610732,
+        "rise_time": 0.4208810440814884,
+        "settling_time_2pct": 3.8200000000000003,
+        "overshoot_percent": 47.83641519005704,
+        "steady_state_error": -8.681590335513079e-08,
+        "control_tv": 23.100246519964955,
+        "control_rms": 2.214845859105687,
+        "control_peak": 10.0,
+        "saturation_fraction": 0.0295,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 31.726447400000325
+    },
+    {
+      "case_id": "fopdt_K1.0_tau2.0_th0.5",
+      "description": "FOPDT K=1.0 \u03c4=2.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 3.574584425469603,
+        "ki": 2.3946121736985284,
+        "kd": 0.8733408014624732
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 1.0000002510579022,
+        "tau": 1.9949997925189609,
+        "theta": 0.4999453720866346
+      },
+      "fit_quality": 0.9999999999984103,
+      "improvement": 69.43238174899327,
+      "score": {
+        "iae": 1.1186557228528935,
+        "ise": 0.7471946634281089,
+        "itae": 1.0350001730449292,
+        "rise_time": 0.4273350073986635,
+        "settling_time_2pct": 4.05,
+        "overshoot_percent": 34.63333824597581,
+        "steady_state_error": -1.871512855800006e-08,
+        "control_tv": 6.713030569088006,
+        "control_rms": 1.2589975271070764,
+        "control_peak": 4.795836634055852,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 39.679211900001974
+    },
+    {
+      "case_id": "fopdt_K1.0_tau1.0_th0.5",
+      "description": "FOPDT K=1.0 \u03c4=1.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 1.7686389252562105,
+        "ki": 1.2431590274827198,
+        "kd": 0.34172165222247425
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 1.000000012608892,
+        "tau": 0.9949949711673476,
+        "theta": 0.49001313709913713
+      },
+      "fit_quality": 0.9999999999975625,
+      "improvement": 92.90905411666701,
+      "score": {
+        "iae": 0.9163375636098079,
+        "ise": 0.6934000649542749,
+        "itae": 0.6291336512512126,
+        "rise_time": 0.4899380204650091,
+        "settling_time_2pct": 2.98,
+        "overshoot_percent": 12.811514025550563,
+        "steady_state_error": 3.6342203779682336e-07,
+        "control_tv": 2.7607518676915817,
+        "control_rms": 1.0558811390894443,
+        "control_peak": 2.402650029272398,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 54.73635049999939
+    },
+    {
+      "case_id": "fopdt_K1.0_tau1.0_th1.0",
+      "description": "FOPDT K=1.0 \u03c4=1.0s \u03b8=1.0s",
+      "status": "ok",
+      "gains": {
+        "kp": 1.1071773216715735,
+        "ki": 0.5975221980557629,
+        "kd": 0.412185603128192
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 1.000001589676992,
+        "tau": 0.9950141605713104,
+        "theta": 0.9900000595388604
+      },
+      "fit_quality": 0.9999999999432861,
+      "improvement": 55.742603962419736,
+      "score": {
+        "iae": 1.7978668323633007,
+        "ise": 1.342031275983746,
+        "itae": 2.5591856529117183,
+        "rise_time": 0.8775777084081897,
+        "settling_time_2pct": 5.5200000000000005,
+        "overshoot_percent": 9.713738374383652,
+        "steady_state_error": 7.523575702161889e-05,
+        "control_tv": 1.9029855794945736,
+        "control_rms": 1.0241817640672077,
+        "control_peak": 1.710674741707894,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 36.41201379999984
+    },
+    {
+      "case_id": "fopdt_K2.5_tau5.0_th0.5",
+      "description": "FOPDT K=2.5 \u03c4=5.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 3.9971619333986057,
+        "ki": 3.2830414915405486,
+        "kd": 1.2737474641061088
+      },
+      "identified_model": {
+        "model_type": "SOPDT",
+        "K": 2.4998037494856673,
+        "tau": 4.992703957111612,
+        "theta": 0.4279648891661951
+      },
+      "fit_quality": 0.9999993339950463,
+      "improvement": 65.41838632292321,
+      "score": {
+        "iae": 1.3458265752541458,
+        "ise": 0.952465016132512,
+        "itae": 1.3062634595017815,
+        "rise_time": 0.3508811311807616,
+        "settling_time_2pct": 3.41,
+        "overshoot_percent": 68.84296410917754,
+        "steady_state_error": 1.0490497359683104e-12,
+        "control_tv": 10.805311787125001,
+        "control_rms": 1.0033847816894224,
+        "control_peak": 5.671513094084286,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 30.37939429999824
+    },
+    {
+      "case_id": "fopdt_K2.5_tau2.0_th0.5",
+      "description": "FOPDT K=2.5 \u03c4=2.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 1.4608748702973893,
+        "ki": 0.9580608809999887,
+        "kd": 0.3654356494762097
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 2.500000253972189,
+        "tau": 1.9949976054556642,
+        "theta": 0.4999678941937879
+      },
+      "fit_quality": 0.9999999999997143,
+      "improvement": 69.44883453553224,
+      "score": {
+        "iae": 1.1086670798789033,
+        "ise": 0.7428127912041472,
+        "itae": 1.0214822623447004,
+        "rise_time": 0.4199393455755388,
+        "settling_time_2pct": 4.03,
+        "overshoot_percent": 35.099670203476016,
+        "steady_state_error": -3.366230183488028e-08,
+        "control_tv": 2.8079932480063903,
+        "control_rms": 0.5057119264058524,
+        "control_peak": 1.9494859196073837,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 30.89639030000035
+    },
+    {
+      "case_id": "fopdt_K2.5_tau1.0_th0.5",
+      "description": "FOPDT K=2.5 \u03c4=1.0s \u03b8=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 0.7216058617419897,
+        "ki": 0.49650923552310783,
+        "kd": 0.14394544208163093
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 2.500000137060466,
+        "tau": 0.9949927747986241,
+        "theta": 0.4905898284069673
+      },
+      "fit_quality": 0.9999999999997107,
+      "improvement": 92.92346457794395,
+      "score": {
+        "iae": 0.9185702030870962,
+        "ise": 0.6905741488051628,
+        "itae": 0.6467279152303131,
+        "rise_time": 0.4799890182907921,
+        "settling_time_2pct": 2.95,
+        "overshoot_percent": 13.223003193248783,
+        "steady_state_error": 5.171699167805244e-07,
+        "control_tv": 1.1488130983882496,
+        "control_rms": 0.42275377317040347,
+        "control_peak": 0.9748255718587744,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 44.76387440000326
+    },
+    {
+      "case_id": "fopdt_K2.5_tau1.0_th1.0",
+      "description": "FOPDT K=2.5 \u03c4=1.0s \u03b8=1.0s",
+      "status": "ok",
+      "gains": {
+        "kp": 0.44351522229901585,
+        "ki": 0.23968034426583065,
+        "kd": 0.17161161410741577
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 2.500000364652978,
+        "tau": 0.9949937153574361,
+        "theta": 0.9999439656588727
+      },
+      "fit_quality": 0.9999999999994325,
+      "improvement": 52.109020281903085,
+      "score": {
+        "iae": 1.7893648540835898,
+        "ise": 1.3405341865678695,
+        "itae": 2.5160741506535977,
+        "rise_time": 0.8757124930101479,
+        "settling_time_2pct": 5.48,
+        "overshoot_percent": 9.540849133184516,
+        "steady_state_error": 6.998341682962206e-05,
+        "control_tv": 0.760166071078501,
+        "control_rms": 0.40975225209243077,
+        "control_peak": 0.6855923700075045,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 43.541928099999495
+    },
+    {
+      "case_id": "first_K1.0_tau1.0",
+      "description": "FirstOrder K=1.0 \u03c4=1.0s",
+      "status": "ok",
+      "gains": {
+        "kp": 1.2000001632515724,
+        "ki": 1.1976762150002027,
+        "kd": 0.03750001066673034
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 1.0000000123601664,
+        "tau": 1.000000148403145,
+        "theta": 0.0
+      },
+      "fit_quality": 0.9999999999989718,
+      "improvement": 49.913915253153526,
+      "score": {
+        "iae": 0.8199738471093527,
+        "ise": 0.4124336525134893,
+        "itae": 0.6625660350553628,
+        "rise_time": 1.800928434329241,
+        "settling_time_2pct": 3.17,
+        "overshoot_percent": 0.00047556921052294143,
+        "steady_state_error": -7.841030047472941e-10,
+        "control_tv": 0.23593044971624122,
+        "control_rms": 1.0094241204961458,
+        "control_peak": 1.2239536875515764,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 27.119607699998596
+    },
+    {
+      "case_id": "first_K2.0_tau3.0",
+      "description": "FirstOrder K=2.0 \u03c4=3.0s",
+      "status": "ok",
+      "gains": {
+        "kp": 178.74172260851324,
+        "ki": 50.05134079310113,
+        "kd": 0.6042478800497252
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 1.9999999925668415,
+        "tau": 2.999999914575568,
+        "theta": 0.007483722561845763
+      },
+      "fit_quality": 0.999999999999765,
+      "improvement": 73.43383592221761,
+      "score": {
+        "iae": 1.1335322268907082,
+        "ise": 0.125416734560433,
+        "itae": 10.361167268121887,
+        "rise_time": 2.515259513673881,
+        "settling_time_2pct": 19.990000000000002,
+        "overshoot_percent": 4.910598751938511,
+        "steady_state_error": 0.020444855746036383,
+        "control_tv": 13240.0,
+        "control_rms": 8.222895116819332,
+        "control_peak": 10.0,
+        "saturation_fraction": 0.6675,
+        "stable": false
+      },
+      "error": null,
+      "elapsed_seconds": 31.00035310000021
+    },
+    {
+      "case_id": "first_K0.5_tau0.5",
+      "description": "FirstOrder K=0.5 \u03c4=0.5s",
+      "status": "ok",
+      "gains": {
+        "kp": 1.1999997772291253,
+        "ki": 2.4000000279984586,
+        "kd": 0.01874999281967294
+      },
+      "identified_model": {
+        "model_type": "FOPDT",
+        "K": 0.4999999941669879,
+        "tau": 0.4999999013457912,
+        "theta": 0.0
+      },
+      "fit_quality": 0.9999999999977269,
+      "improvement": 50.02896913131064,
+      "score": {
+        "iae": 0.8183333235917107,
+        "ise": 0.4090393007294762,
+        "itae": 0.6697908752699702,
+        "rise_time": 1.7988393327974075,
+        "settling_time_2pct": 3.21,
+        "overshoot_percent": 0.0,
+        "steady_state_error": 4.7482018317168695e-11,
+        "control_tv": 0.7760002224720595,
+        "control_rms": 1.9710498712637003,
+        "control_peak": 1.9999999999811693,
+        "saturation_fraction": 0.0,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 23.18484399999943
+    },
+    {
+      "case_id": "second_wn1_zeta0.3",
+      "description": "SecondOrder \u03c9n=1 \u03b6=0.3",
+      "status": "ok",
+      "gains": {
+        "kp": 126.47205751403081,
+        "ki": 88.43104153916872,
+        "kd": 0.5119329581249628
+      },
+      "identified_model": {
+        "model_type": "SECOND_ORDER",
+        "K": 1.0004207062381931,
+        "tau": 0.9966000168396482,
+        "theta": 0.01
+      },
+      "fit_quality": 0.9999845367956426,
+      "improvement": 0.0,
+      "score": {
+        "iae": 5.026402931617858,
+        "ise": 1.7085550727209808,
+        "itae": 44.03702744835361,
+        "rise_time": 19.846500984110637,
+        "settling_time_2pct": 19.990000000000002,
+        "overshoot_percent": 61.785042810082125,
+        "steady_state_error": 0.0470243294785303,
+        "control_tv": 760.0,
+        "control_rms": 9.584640542723509,
+        "control_peak": 10.0,
+        "saturation_fraction": 0.8785,
+        "stable": false
+      },
+      "error": null,
+      "elapsed_seconds": 11.234359899997798
+    },
+    {
+      "case_id": "second_wn1_zeta0.7",
+      "description": "SecondOrder \u03c9n=1 \u03b6=0.7",
+      "status": "ok",
+      "gains": {
+        "kp": 126.00903344369723,
+        "ki": 88.43104153916872,
+        "kd": 0.5100587316225385
+      },
+      "identified_model": {
+        "model_type": "SECOND_ORDER",
+        "K": 1.000217269835409,
+        "tau": 0.9927494689096807,
+        "theta": 0.01
+      },
+      "fit_quality": 0.9999966353799695,
+      "improvement": 0.0,
+      "score": {
+        "iae": 2.628673099256335,
+        "ise": 0.6258380344621691,
+        "itae": 21.26047010712926,
+        "rise_time": 1.4484166125615319,
+        "settling_time_2pct": 19.990000000000002,
+        "overshoot_percent": 41.80416004237995,
+        "steady_state_error": 0.048467612455874054,
+        "control_tv": 1045.4767806953123,
+        "control_rms": 9.058084220183435,
+        "control_peak": 10.0,
+        "saturation_fraction": 0.7235,
+        "stable": false
+      },
+      "error": null,
+      "elapsed_seconds": 21.34885850000137
+    },
+    {
+      "case_id": "second_wn1_zeta1.5",
+      "description": "SecondOrder \u03c9n=1 \u03b6=1.5",
+      "status": "ok",
+      "gains": {
+        "kp": 124.97469865618064,
+        "ki": 88.43104153916872,
+        "kd": 0.5058719564733622
+      },
+      "identified_model": {
+        "model_type": "SECOND_ORDER",
+        "K": 1.0000847893661022,
+        "tau": 0.984470154531434,
+        "theta": 0.01
+      },
+      "fit_quality": 0.9999995731503855,
+      "improvement": 0.0,
+      "score": {
+        "iae": 0.7003376443636222,
+        "ise": 0.30758123851412866,
+        "itae": 1.2401834668478022,
+        "rise_time": 1.7600027525859914,
+        "settling_time_2pct": 6.96,
+        "overshoot_percent": 19.93542101506329,
+        "steady_state_error": 3.4952627210316223e-06,
+        "control_tv": 349.8241606436818,
+        "control_rms": 3.791052833938406,
+        "control_peak": 10.0,
+        "saturation_fraction": 0.079,
+        "stable": 1.0
+      },
+      "error": null,
+      "elapsed_seconds": 14.950834000002942
+    }
+  ]
+}

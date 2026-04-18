@@ -93,7 +93,9 @@ def integrate_trapezoid(values: ArrayLike, dt: float) -> float:
     arr = np.asarray(values, dtype=float)
     if len(arr) < 2:
         return 0.0
-    return float(np.trapz(arr, dx=dt))
+    # np.trapezoid on numpy>=2.0, fall back to np.trapz on older versions.
+    trapezoid = getattr(np, "trapezoid", getattr(np, "trapz", None))
+    return float(trapezoid(arr, dx=dt))
 
 
 def sign(x: float) -> int:

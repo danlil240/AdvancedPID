@@ -192,26 +192,35 @@ class PIDController:
         
         # Calculate error
         error = setpoint - measurement
-        
-        # Apply deadband
-        if abs(error) < self._params.error_deadband:
+
+        # Apply deadband: when |error| < deadband, ALL error-driven terms are
+        # zeroed (P, I, D). Feedforward is intentionally preserved since it is
+        # not an error response. See test_error_deadband.
+        in_deadband = abs(error) < self._params.error_deadband
+        if in_deadband:
             error = 0.0
-        
+
         # Initialize on first call
         if not self._initialized:
             self._prev_measurement = measurement
             self._prev_error = error
             self._initialized = True
-        
-        # Calculate P term with setpoint weighting
-        error_p = self._params.setpoint_weight_p * setpoint - measurement
+
+        # Calculate P term with setpoint weighting (suppressed in deadband)
+        if in_deadband:
+            error_p = 0.0
+        else:
+            error_p = self._params.setpoint_weight_p * setpoint - measurement
         p_term = self._params.kp * error_p
-        
-        # Calculate I term
+
+        # Calculate I term (error is 0.0 in deadband so this is a no-op)
         i_term = self._calculate_integral(error)
-        
-        # Calculate D term
-        d_term = self._calculate_derivative(setpoint, measurement, error)
+
+        # Calculate D term (frozen during deadband to avoid filter discharge
+        # contributing to the control output).
+        d_term = self._calculate_derivative(
+            setpoint, measurement, error, in_deadband=in_deadband
+        )
         
         # Sum components
         output_unsat = p_term + i_term + d_term + feedforward
@@ -287,15 +296,21 @@ class PIDController:
         return self._integral
     
     def _calculate_derivative(
-        self, 
-        setpoint: float, 
-        measurement: float, 
-        error: float
+        self,
+        setpoint: float,
+        measurement: float,
+        error: float,
+        in_deadband: bool = False,
     ) -> float:
-        """Calculate filtered derivative term."""
-        if self._params.kd == 0:
+        """Calculate filtered derivative term.
+
+        When ``in_deadband`` is True the derivative is frozen (filter state is
+        not updated and the term contributes zero) so that the deadband
+        genuinely suppresses all error-driven control action.
+        """
+        if self._params.kd == 0 or in_deadband:
             return 0.0
-        
+
         if self._params.derivative_mode == DerivativeMode.MEASUREMENT:
             # Derivative on measurement (avoids derivative kick on setpoint change)
             derivative_input = -measurement
